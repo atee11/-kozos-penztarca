@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="hu" style="background:#0B1F1C">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KP – Közös Pénztárca</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="KP">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0B1F1C">
+<style>
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#0B1F1C;color:#F4F1EA;font-family:-apple-system,'Inter',sans-serif}
+input,button,textarea{font-family:inherit}
+button{cursor:pointer}
+.app{min-height:100dvh;padding:max(22px,env(safe-area-inset-top)) clamp(16px,4vw,24px) calc(110px + env(safe-area-inset-bottom));max-width:480px;margin:0 auto;overflow-x:hidden}
+.welcome{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px}
+.welcome-card{width:100%;max-width:320px;text-align:center}
+.kp-lg{width:72px;height:72px;border-radius:20px;background:#4DD0B1;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#0B1F1C;letter-spacing:-1px;margin:0 auto 22px}
+.w-title{font-size:28px;font-weight:700;margin:0 0 8px}
+.w-sub{font-size:16px;color:#9AA8A5;margin-bottom:34px;line-height:1.5}
+.w-btn{width:100%;padding:17px;border-radius:16px;border:none;background:#4DD0B1;color:#0B1F1C;font-weight:700;font-size:17px}
+.topbar{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+.kp-sm{width:36px;height:36px;border-radius:10px;background:#4DD0B1;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#0B1F1C;letter-spacing:-0.5px;flex-shrink:0}
+.tb-title{font-size:16px;font-weight:700;flex:1}
+.tb-btn{background:none;border:none;padding:4px;display:flex}
+.sav-hero{display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,#1A3A2E,#0F2920);border:1px solid #2A5040;border-radius:18px;padding:17px 18px;margin-bottom:12px}
+.sav-label{font-size:13px;font-weight:700;color:#81C784;text-transform:uppercase;letter-spacing:.5px}
+.sav-amt{font-size:clamp(18px,5vw,24px);font-weight:800;color:#81C784;white-space:nowrap}
+.hero-row{display:flex;gap:9px;margin-bottom:26px}
+.hero-card{flex:1;background:#111F1B;border:1px solid;border-radius:14px;padding:13px 11px;min-width:0}
+.hero-card.inc{border-color:#1E5C4F}
+.hero-card.exp{border-color:#5C2A1E}
+.h-label{font-size:12px;color:#9AA8A5;margin-bottom:6px}
+.h-val{font-size:clamp(15px,4.5vw,19px);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.section{margin-bottom:26px}
+.sec-title{font-size:13px;font-weight:700;color:#6B7B78;text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+.cat-row{margin-bottom:13px}
+.cat-top{display:flex;justify-content:space-between;margin-bottom:6px;font-size:14px;gap:8px}
+.cat-lbl{display:flex;align-items:center;gap:7px;color:#D8E0DD;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cat-ico{font-size:15px;flex-shrink:0}
+.cat-amt{color:#F4F1EA;font-weight:600;flex-shrink:0}
+.cat-pct{color:#6B7B78;font-weight:400}
+.bar-track{height:6px;background:#1A2925;border-radius:999px;overflow:hidden}
+.bar-fill{height:100%;border-radius:999px}
+.gc{display:flex;background:#111F1B;border:1px solid #1C2D28;border-radius:16px;margin-bottom:12px;overflow:hidden;transition:opacity .15s}
+.gc.drag{opacity:.4}
+.gc-bar{width:6px;flex-shrink:0}
+.gc-in{flex:1;padding:14px 14px 8px;min-width:0}
+.gc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid #1A2925}
+.gc-hl{display:flex;align-items:center;gap:7px}
+.gc-name{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px}
+.gc-sum{font-size:14px;font-weight:700}
+.sub-ttl{font-size:12px;color:#6B7B78;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-top:10px;margin-bottom:3px}
+.row{display:flex;align-items:center;gap:7px;padding:10px 0;border-bottom:1px solid #16221E;min-width:0}
+.row.nb{border-bottom:none}
+.row.lifted{padding:10px 8px;background:#1C2F28;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.45);position:relative;z-index:10}
+.grip{flex-shrink:0;touch-action:none;display:flex;align-items:center;padding:0 2px;cursor:grab}
+.row-main{flex:1 1 auto;min-width:0}
+.row-lbl{font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row-meta{font-size:12px;color:#6B7B78;margin-top:2px}
+.row-amt{font-size:14px;font-weight:700;flex-shrink:0;white-space:nowrap}
+.ico-btn{background:none;border:none;padding:4px;flex-shrink:0;display:flex}
+.ghost{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:11px;border-radius:10px;border:1px dashed #2A3A35;background:transparent;color:#9AA8A5;font-size:13px;font-weight:600;margin-top:9px}
+.ghost-out{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:13px;border-radius:12px;border:1px dashed #232F2B;background:transparent;color:#6B7B78;font-size:13px;font-weight:600;margin-top:4px}
+.fab{position:fixed;bottom:calc(26px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:58px;height:58px;border-radius:50%;background:#4DD0B1;border:none;box-shadow:0 8px 28px rgba(77,208,177,.38);display:flex;align-items:center;justify-content:center;z-index:40}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.overlay.hidden{display:none}
+.modal{width:100%;max-width:480px;max-height:88dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#111F1B;border-radius:24px 24px 0 0;padding:22px 18px calc(30px + env(safe-area-inset-bottom))}
+.m-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:17px}
+.m-title{font-size:17px;font-weight:700}
+.x-btn{background:none;border:none;padding:4px;display:flex}
+.tog-row{display:flex;gap:8px;margin-bottom:15px}
+.tog{flex:1;padding:11px;border-radius:12px;border:1px solid #27332F;background:transparent;color:#9AA8A5;font-weight:600;font-size:14px}
+.tog.ae{background:rgba(255,138,101,.13);border-color:#FF8A65;color:#FF8A65}
+.tog.ai{background:rgba(77,208,177,.13);border-color:#4DD0B1;color:#4DD0B1}
+.finput{width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#0B1F1C;color:#F4F1EA;font-size:16px;margin-bottom:11px;appearance:none;-webkit-appearance:none;display:block}
+.finput::placeholder{color:#4A5A55}
+.flabel{font-size:13px;color:#9AA8A5;margin-bottom:9px;font-weight:600}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:7px}
+.pill{display:flex;align-items:center;gap:5px;padding:8px 13px;border-radius:999px;border:1px solid;font-size:13px;color:#D8E0DD;background:transparent}
+.col-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.cdot{width:30px;height:30px;border-radius:50%;border:none}
+.sub-btn{width:100%;padding:15px;border-radius:14px;border:none;background:#4DD0B1;color:#0B1F1C;font-weight:700;font-size:15px;margin-top:4px}
+.sub-btn.w{background:#FF8A65}
+.sync-note{font-size:14px;color:#9AA8A5;line-height:1.5;margin-bottom:16px}
+.sync-ta{width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#0B1F1C;color:#F4F1EA;font-size:11px;margin-bottom:11px;height:80px;resize:none;font-family:monospace;display:block}
+.sync-ta::placeholder{color:#4A5A55}
+.sync-msg{font-size:13px;color:#9AA8A5;margin-top:12px;line-height:1.5}
+.mt16{margin-top:16px}
+</style>
+</head>
+<body style="margin:0;background:#0B1F1C;color:#F4F1EA;font-family:-apple-system,'Inter',sans-serif">
+<div id="root" style="background:#0B1F1C;min-height:100dvh"></div>
+<script>
+'use strict';
+
+// SVG icons
+const IC={
+  grip:`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#3A4A45"><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>`,
+  plus:`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  plusLg:`<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0B1F1C" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  x:`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9AA8A5" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  pencil:`<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7B78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  trash:`<svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B7B78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>`,
+  sync:`<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9AA8A5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>`,
+};
+
+// Metadata
+const GM={
+  'Bevétel':{color:'#4DD0B1',icon:'💰'},
+  'Rezsi':{color:'#FF8A65',icon:'🏠'},
+  'Kaja':{color:'#FFB74D',icon:'🛒'},
+  'Hitelek':{color:'#F06292',icon:'🏦'},
+  'Megtakarítás':{color:'#81C784',icon:'💎'},
+};
+const PAL=['#FF8A65','#FFB74D','#F06292','#81C784','#4FC3F7','#BA68C8','#4DD0B1','#A1887F','#90A4AE','#FF7043'];
+function meta(name){
+  if(GM[name])return GM[name];
+  let h=0;for(let i=0;i<name.length;i++)h=name.charCodeAt(i)+((h<<5)-h);
+  return{color:PAL[Math.abs(h)%PAL.length],icon:'📁'};
+}
+const fmt=n=>new Intl.NumberFormat('hu-HU',{maximumFractionDigits:0}).format(n)+' Ft';
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const today=()=>new Date().toISOString().slice(0,10);
+
+function fbd(y,m){let c=0,d=1;while(c<5){const w=new Date(y,m,d).getDay();if(w!==0&&w!==6)c++;if(c<5)d++;}return d;}
+function salaryMonths(since){
+  if(!since)return 0;
+  const s=new Date(since),now=new Date();
+  let c=0,y=s.getFullYear(),m=s.getMonth();
+  while(y<now.getFullYear()||(y===now.getFullYear()&&m<=now.getMonth())){
+    const d=new Date(y,m,fbd(y,m));
+    if(d>=s&&d<=now)c++;
+    m++;if(m>11){m=0;y++;}
+  }
+  return c;
+}
+
+const DEF=[
+  {id:'d0',type:'income',label:'Szandra',amount:650000,group:'Bevétel'},
+  {id:'d1',type:'income',label:'Ati',amount:650000,group:'Bevétel'},
+  {id:'d2',type:'expense',label:'Kajo étkezés',amount:17000,group:'Rezsi'},
+  {id:'d3',type:'expense',label:'Vodafone',amount:70000,group:'Rezsi'},
+  {id:'d4',type:'expense',label:'Digi',amount:8110,group:'Rezsi'},
+  {id:'d5',type:'expense',label:'MVM',amount:6000,group:'Rezsi'},
+  {id:'d6',type:'expense',label:'Online előfizetések',amount:8000,group:'Rezsi'},
+  {id:'d7',type:'expense',label:'Díjbeszedő',amount:10000,group:'Rezsi'},
+  {id:'d8',type:'expense',label:'Főtáv',amount:13000,group:'Rezsi'},
+  {id:'d9',type:'expense',label:'Közös ktg',amount:12330,group:'Rezsi'},
+  {id:'d10',type:'expense',label:'Tankolás',amount:60000,group:'Rezsi'},
+  {id:'d11',type:'expense',label:'Fanni edzés',amount:50000,group:'Rezsi'},
+  {id:'d12',type:'expense',label:'Beni',amount:50000,group:'Rezsi'},
+  {id:'d13',type:'expense',label:'Lakásbiztosítás',amount:3000,group:'Rezsi'},
+  {id:'d14',type:'expense',label:'Autó lízing',amount:156035,group:'Rezsi'},
+  {id:'d15',type:'expense',label:'Havi élelmiszer',amount:200000,group:'Kaja'},
+  {id:'d16',type:'expense',label:'Lakáshitel',amount:82500,group:'Hitelek'},
+  {id:'d17',type:'expense',label:'KH hitel',amount:0,group:'Hitelek'},
+  {id:'d18',type:'expense',label:'Cetelem',amount:0,group:'Hitelek'},
+  {id:'d19',type:'expense',label:'Raiffeisen',amount:47150,group:'Hitelek'},
+  {id:'d20',type:'expense',label:'OTP hitel 1',amount:82000,group:'Hitelek'},
+  {id:'d21',type:'expense',label:'OTP hitel 2',amount:29000,group:'Hitelek'},
+  {id:'d22',type:'expense',label:'OTP hitel 3',amount:11635,group:'Hitelek'},
+  {id:'d23',type:'expense',label:'Havi megtakarítás',amount:300000,group:'Megtakarítás'},
+];
+
+// Storage
+const K='kp__';
+const lg=k=>{try{const v=localStorage.getItem(K+k);return v?JSON.parse(v):null;}catch(_){return null;}};
+const ls=(k,v)=>{try{localStorage.setItem(K+k,JSON.stringify(v));}catch(_){}};
+
+// State
+let S={
+  entered:false,
+  items:[],groupOrder:null,customGroups:[],savingsEntries:[],savingsStart:null,
+  modal:null,editingId:null,formType:'expense',formGroup:'Rezsi',
+  draggingGroup:null,draggingItem:null,
+};
+
+function loadData(){
+  const items=lg('items');
+  S.items=items&&items.length>0?items:DEF;
+  if(!items||!items.length)ls('items',S.items);
+  S.groupOrder=lg('groupOrder');
+  S.customGroups=lg('customGroups')||[];
+  S.savingsEntries=lg('savingsEntries')||[];
+  S.savingsStart=lg('savingsStart')||(new Date().toISOString().slice(0,7)+'-01');
+  if(!lg('savingsStart'))ls('savingsStart',S.savingsStart);
+}
+
+// Computed
+function getTI(){return S.items.filter(i=>i.type==='income').reduce((s,i)=>s+i.amount,0);}
+function getGE(){
+  const map={};
+  S.items.filter(i=>i.type==='expense').forEach(i=>{if(!map[i.group])map[i.group]=[];map[i.group].push(i);});
+  const g=Object.entries(map).map(([name,list])=>({name,...meta(name),items:list,total:list.reduce((s,i)=>s+i.amount,0)}));
+  if(S.groupOrder)g.sort((a,b)=>{const ai=S.groupOrder.indexOf(a.name),bi=S.groupOrder.indexOf(b.name);if(ai===-1&&bi===-1)return 0;if(ai===-1)return 1;if(bi===-1)return -1;return ai-bi;});
+  return g;
+}
+function getAT(){return getGE().reduce((s,g)=>s+g.total,0);}
+function getZPP(){return Math.max(0,(getTI()-getAT())/2);}
+function getMFS(){return S.items.filter(i=>i.type==='expense'&&i.group==='Megtakarítás').reduce((s,i)=>s+i.amount,0);}
+function getST(){return salaryMonths(S.savingsStart)*getMFS()+S.savingsEntries.reduce((s,e)=>s+e.amount,0);}
+function getSugg(){const s=new Set(Object.keys(GM));S.customGroups.forEach(g=>s.add(g));S.items.forEach(i=>s.add(i.group));s.delete('Bevétel');return[...s];}
+
+// Render
+function render(){
+  const r=document.getElementById('root');
+  r.innerHTML=S.entered?renderMain():renderWelcome();
+  bind();
+}
+
+function renderWelcome(){
+  return`<div class="welcome"><div class="welcome-card">
+    <div class="kp-lg">KP</div>
+    <h1 class="w-title">Közös Pénztárca</h1>
+    <p class="w-sub">Szandra & Ati közös havi büdzséje</p>
+    <button class="w-btn" onclick="A.enter()">Megnyitás</button>
+  </div></div>`;
+}
+
+function renderMain(){
+  const ti=getTI(),at=getAT(),zpp=getZPP(),st=getST(),ge=getGE();
+  const ii=S.items.filter(i=>i.type==='income');
+
+  // Alloc bars
+  let bars=ge.map(g=>{
+    const pct=ti>0?Math.round(g.total/ti*100):0;
+    const w=ti?Math.min(100,g.total/ti*100):0;
+    return`<div class="cat-row"><div class="cat-top"><span class="cat-lbl"><span class="cat-ico">${g.icon}</span>${esc(g.name)}</span><span class="cat-amt">${fmt(g.total)}<span class="cat-pct"> · ${pct}%</span></span></div><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${g.color}"></div></div></div>`;
+  }).join('');
+  const zpw=ti?Math.min(100,(zpp*2)/ti*100):0,zpp2=ti>0?Math.round((zpp*2)/ti*100):0;
+  bars+=`<div class="cat-row"><div class="cat-top"><span class="cat-lbl"><span class="cat-ico">👛</span>Zsebpénz (fejenként)</span><span class="cat-amt">${fmt(zpp)}<span class="cat-pct"> · ${zpp2}%</span></span></div><div class="bar-track"><div class="bar-fill" style="width:${zpw}%;background:#4FC3F7"></div></div></div>`;
+
+  // Income rows
+  const iRows=ii.map(it=>`<div class="row${S.draggingItem===it.id?' lifted':''}" data-item-id="${it.id}">
+    <span class="grip" data-gi="${it.id}" data-gg="Bevétel">${IC.grip}</span>
+    <div class="row-main"><div class="row-lbl">${esc(it.label)}</div></div>
+    <div class="row-amt" style="color:#4DD0B1">+${fmt(it.amount)}</div>
+    <button class="ico-btn" onclick="A.edit('${it.id}')">${IC.pencil}</button>
+    <button class="ico-btn" onclick="A.del('${it.id}')">${IC.trash}</button>
+  </div>`).join('');
+
+  // Expense group cards
+  const gcards=ge.map(g=>{
+    const rows=g.items.map(it=>`<div class="row${S.draggingItem===it.id?' lifted':''}" data-item-id="${it.id}">
+      <span class="grip" data-gi="${it.id}" data-gg="${esc(g.name)}">${IC.grip}</span>
+      <div class="row-main"><div class="row-lbl">${esc(it.label)}</div></div>
+      <div class="row-amt">−${fmt(it.amount)}</div>
+      <button class="ico-btn" onclick="A.edit('${it.id}')">${IC.pencil}</button>
+      <button class="ico-btn" onclick="A.del('${it.id}')">${IC.trash}</button>
+    </div>`).join('');
+    let savR='';
+    if(g.name==='Megtakarítás'&&S.savingsEntries.length>0){
+      savR=`<div class="sub-ttl">Egyedi befizetések</div>`+S.savingsEntries.map(e=>`<div class="row">
+        <div class="row-main"><div class="row-lbl">${esc(e.label)}</div><div class="row-meta">${new Date(e.date).toLocaleDateString('hu-HU',{month:'short',day:'numeric'})}</div></div>
+        <div class="row-amt" style="color:#81C784">+${fmt(e.amount)}</div>
+        <button class="ico-btn" onclick="A.delSav('${e.id}')">${IC.trash}</button>
+      </div>`).join('');
+    }
+    const gc=g.name==='Megtakarítás'?`A.openSav()`:`A.newItem('expense','${esc(g.name)}')`;
+    const gl=g.name==='Megtakarítás'?'Egyedi befizetés':'Tétel hozzáadása';
+    return`<div class="gc${S.draggingGroup===g.name?' drag':''}" data-group-name="${esc(g.name)}">
+      <div class="gc-bar" style="background:${g.color}"></div>
+      <div class="gc-in">
+        <div class="gc-head">
+          <div class="gc-hl"><span class="grip" data-gc="${esc(g.name)}">${IC.grip}</span><span class="gc-name" style="color:${g.color}">${g.icon} ${esc(g.name)}</span></div>
+          <span class="gc-sum">${fmt(g.total)}</span>
+        </div>
+        ${rows}${savR}
+        <button class="ghost" onclick="${gc}">${IC.plus} ${gl}</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Modals
+  const sugg=getSugg();
+  const fg=S.formGroup||'Rezsi';
+  const pills=sugg.map(g=>{const m=meta(g);const sel=fg===g;return`<button class="pill" style="border-color:${sel?m.color:'#27332F'};background:${sel?m.color+'33':'transparent'}" onclick="A.setG('${esc(g)}')">${m.icon} ${esc(g)}</button>`;}).join('');
+  const cgv=sugg.includes(fg)?'':fg;
+  const showCol=fg&&!GM[fg]?'':'display:none';
+  const cdots=PAL.map(c=>{const cur=meta(fg).color===c;return`<button class="cdot" style="background:${c};outline:${cur?`2px solid ${c}`:'none'};outline-offset:2px" onclick="A.setC('${esc(fg)}','${c}')"></button>`;}).join('');
+  let el='',ea='';
+  if(S.editingId){const it=S.items.find(i=>i.id===S.editingId);if(it){el=it.label;ea=String(it.amount);}}
+  const ft=S.formType||'expense';
+
+  const mForm=`<div class="overlay${S.modal==='form'?'':' hidden'}" onclick="if(event.target===this)A.close()">
+    <div class="modal">
+      <div class="m-head"><div class="m-title">${S.editingId?'Szerkesztés':'Új tétel'}</div><button class="x-btn" onclick="A.close()">${IC.x}</button></div>
+      <div class="tog-row">
+        <button class="tog${ft==='expense'?' ae':''}" onclick="A.setT('expense')">Kiadás</button>
+        <button class="tog${ft==='income'?' ai':''}" onclick="A.setT('income')">Bevétel</button>
+      </div>
+      <input id="fl" class="finput" type="text" placeholder="Megnevezés" value="${esc(el)}">
+      <input id="fa" class="finput" type="number" inputmode="decimal" placeholder="Havi összeg (Ft)" value="${esc(ea)}">
+      ${ft==='expense'?`<div class="flabel">Csoport</div><div class="pills">${pills}</div>
+      <input id="fg" class="finput" type="text" placeholder="Vagy új csoportnév…" value="${esc(cgv)}" oninput="A.setG(this.value)">
+      <div id="cp" style="${showCol}"><div class="flabel">Szín</div><div class="col-row">${cdots}</div></div>`:''}
+      <button class="sub-btn" onclick="A.submit()">${S.editingId?'Mentés':'Hozzáadás'}</button>
+    </div>
+  </div>`;
+
+  const mSav=`<div class="overlay${S.modal==='sav'?'':' hidden'}" onclick="if(event.target===this)A.close()">
+    <div class="modal">
+      <div class="m-head"><div class="m-title">💎 Egyedi befizetés</div><button class="x-btn" onclick="A.close()">${IC.x}</button></div>
+      <input id="sa" class="finput" type="number" inputmode="decimal" placeholder="Összeg (Ft)">
+      <input id="sl" class="finput" type="text" placeholder="Megjegyzés (pl. bónusz)">
+      <input id="sd" class="finput" type="date" value="${today()}">
+      <button class="sub-btn" onclick="A.submitSav()">Hozzáadás</button>
+    </div>
+  </div>`;
+
+  const mSync=`<div class="overlay${S.modal==='sync'?'':' hidden'}" onclick="if(event.target===this)A.close()">
+    <div class="modal">
+      <div class="m-head"><div class="m-title">🔄 Szinkronizálás</div><button class="x-btn" onclick="A.close()">${IC.x}</button></div>
+      <p class="sync-note">Az adatok eszközönként tárolódnak. Exportáld és küldd el üzenetben, a másik telefonon importáld be.</p>
+      <button class="sub-btn" onclick="A.exp()">📤 Exportálás (vágólapra)</button>
+      <div class="flabel mt16">Importálás</div>
+      <textarea id="st" class="sync-ta" placeholder="Illeszd be ide az exportált szöveget..."></textarea>
+      <button class="sub-btn w" onclick="A.imp()">📥 Importálás</button>
+      <div id="sm" class="sync-msg"></div>
+    </div>
+  </div>`;
+
+  return`<div class="app">
+    <div class="topbar"><div class="kp-sm">KP</div><span class="tb-title">Közös Pénztárca</span><button class="tb-btn" onclick="A.openSync()">${IC.sync}</button></div>
+    <div class="sav-hero"><div class="sav-label">Megtakarítás</div><div class="sav-amt">${fmt(st)}</div></div>
+    <div class="hero-row">
+      <div class="hero-card inc"><div class="h-label">💰 Bevétel</div><div class="h-val" style="color:#4DD0B1">${fmt(ti)}</div></div>
+      <div class="hero-card exp"><div class="h-label">📤 Kiadás</div><div class="h-val" style="color:#FF8A65">${fmt(at)}</div></div>
+    </div>
+    <div class="section"><div class="sec-title">Hova oszlik el</div>${bars}</div>
+    <div class="section"><div class="sec-title">Bevétel</div>
+      <div class="gc"><div class="gc-bar" style="background:#4DD0B1"></div><div class="gc-in">
+        <div class="gc-head"><span class="gc-name" style="color:#4DD0B1">💰 Bevétel</span><span class="gc-sum">${fmt(ti)}</span></div>
+        ${iRows}<button class="ghost" onclick="A.newItem('income')">${IC.plus} Bevétel hozzáadása</button>
+      </div></div>
+    </div>
+    <div class="section"><div class="sec-title">Tételek</div>
+      ${gcards}
+      <div class="gc" style="opacity:.85"><div class="gc-bar" style="background:#4FC3F7"></div><div class="gc-in">
+        <div class="gc-head"><span class="gc-name" style="color:#4FC3F7">👛 Zsebpénz</span><span class="gc-sum" style="font-size:12px;color:#9AA8A5">automatikus</span></div>
+        <div class="row"><div class="row-main"><div class="row-lbl">Szandra</div></div><div class="row-amt" style="color:#4FC3F7">${fmt(zpp)}</div></div>
+        <div class="row nb"><div class="row-main"><div class="row-lbl">Ati</div></div><div class="row-amt" style="color:#4FC3F7">${fmt(zpp)}</div></div>
+      </div></div>
+      <button class="ghost-out" onclick="A.newItem('expense')">${IC.plus} Új csoport / tétel</button>
+    </div>
+    <button class="fab" onclick="A.newItem('expense')">${IC.plusLg}</button>
+    ${mForm}${mSav}${mSync}
+  </div>`;
+}
+
+function bind(){
+  document.querySelectorAll('.grip').forEach(el=>{
+    el.addEventListener('touchstart',e=>{
+      e.stopPropagation();
+      const gc=el.dataset.gc,gi=el.dataset.gi,gg=el.dataset.gg;
+      if(gc){DS={type:'gc',name:gc};S.draggingGroup=gc;}
+      else if(gi){DS={type:'item',id:gi,group:gg};S.draggingItem=gi;}
+      render();
+    },{passive:true});
+  });
+}
+
+// Drag
+let DS=null;
+document.addEventListener('touchmove',e=>{
+  if(!DS)return;
+  e.preventDefault();
+  const t=e.touches[0];
+  const el=document.elementFromPoint(t.clientX,t.clientY);
+  if(!el)return;
+  if(DS.type==='gc'){
+    const card=el.closest('[data-group-name]');if(!card)return;
+    const tn=card.dataset.groupName,cn=DS.name;if(tn===cn)return;
+    const names=getGE().map(g=>g.name);
+    const ci=names.indexOf(cn),ti=names.indexOf(tn);if(ci===-1||ti===-1)return;
+    const next=[...names];next.splice(ci,1);next.splice(ti,0,cn);
+    S.groupOrder=next;ls('groupOrder',next);render();
+  }
+  if(DS.type==='item'){
+    const row=el.closest('[data-item-id]');if(!row)return;
+    const tid=row.dataset.itemId,sid=DS.id,gn=DS.group;if(tid===sid)return;
+    const gi=S.items.filter(i=>i.group===gn);
+    const si=gi.findIndex(i=>i.id===sid),ti=gi.findIndex(i=>i.id===tid);
+    if(si===-1||ti===-1)return;
+    const ng=[...gi];ng.splice(si,1);ng.splice(ti,0,gi[si]);
+    let x=0;S.items=S.items.map(i=>i.group===gn?ng[x++]:i);render();
+  }
+},{passive:false});
+document.addEventListener('touchend',()=>{
+  if(!DS)return;
+  if(DS.type==='item')ls('items',S.items);
+  DS=null;S.draggingGroup=null;S.draggingItem=null;render();
+});
+
+// App controller
+window.A={
+  enter(){S.entered=true;loadData();render();},
+  close(){S.modal=null;S.editingId=null;render();},
+  newItem(type,group){S.modal='form';S.editingId=null;S.formType=type;S.formGroup=group||(type==='income'?'Bevétel':'Rezsi');render();setTimeout(()=>document.getElementById('fl')?.focus(),100);},
+  edit(id){const it=S.items.find(i=>i.id===id);if(!it)return;S.modal='form';S.editingId=id;S.formType=it.type;S.formGroup=it.group;render();},
+  setT(t){S.formType=t;S.formGroup=t==='income'?'Bevétel':'Rezsi';render();},
+  setG(g){S.formGroup=g;render();},
+  setC(g,c){GM[g]={...(GM[g]||{}),color:c,icon:GM[g]?.icon||'📁'};render();},
+  submit(){
+    const lbl=document.getElementById('fl')?.value.trim();
+    const amt=parseFloat(document.getElementById('fa')?.value);
+    const grp=(document.getElementById('fg')?.value.trim()||S.formGroup).trim()||'Egyéb';
+    if(!lbl||!amt||amt<=0)return;
+    if(!GM[grp]&&!S.customGroups.includes(grp)){S.customGroups.push(grp);ls('customGroups',S.customGroups);}
+    if(S.editingId){S.items=S.items.map(i=>i.id===S.editingId?{...i,type:S.formType,label:lbl,amount:amt,group:grp}:i);}
+    else{S.items.unshift({id:Date.now().toString(),type:S.formType,label:lbl,amount:amt,group:grp});}
+    ls('items',S.items);S.modal=null;S.editingId=null;render();
+  },
+  del(id){S.items=S.items.filter(i=>i.id!==id);ls('items',S.items);render();},
+  openSav(){S.modal='sav';render();setTimeout(()=>document.getElementById('sa')?.focus(),100);},
+  submitSav(){
+    const amt=parseFloat(document.getElementById('sa')?.value);
+    const lbl=document.getElementById('sl')?.value.trim()||'Egyedi befizetés';
+    const dt=document.getElementById('sd')?.value||today();
+    if(!amt||amt<=0)return;
+    S.savingsEntries.unshift({id:Date.now().toString(),amount:amt,label:lbl,date:dt});
+    ls('savingsEntries',S.savingsEntries);S.modal=null;render();
+  },
+  delSav(id){S.savingsEntries=S.savingsEntries.filter(e=>e.id!==id);ls('savingsEntries',S.savingsEntries);render();},
+  openSync(){S.modal='sync';render();},
+  exp(){
+    const d={};['items','groupOrder','customGroups','savingsEntries','savingsStart'].forEach(k=>{const v=localStorage.getItem(K+k);if(v)d[k]=v;});
+    const j=JSON.stringify(d);
+    if(navigator.clipboard){navigator.clipboard.writeText(j).then(()=>{const m=document.getElementById('sm');if(m)m.textContent='✅ Vágólapra másolva! Küldd el és importáld a másik telefonon.';});}
+    else{const t=document.getElementById('st');if(t)t.value=j;}
+  },
+  imp(){
+    const t=document.getElementById('st')?.value.trim();
+    const m=document.getElementById('sm');
+    if(!t){if(m)m.textContent='❌ Üres mező.';return;}
+    try{const d=JSON.parse(t);Object.entries(d).forEach(([k,v])=>localStorage.setItem(K+k,v));if(m)m.textContent='✅ Sikeres! Újratöltés...';setTimeout(()=>{S.modal=null;loadData();render();},1000);}
+    catch(_){if(m)m.textContent='❌ Érvénytelen adat.';}
+  },
+};
+
+render();
+</script>
+</body>
+</html>
