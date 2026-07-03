@@ -8,29 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="KP">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0B1F1C">
-<script>
-(function(){
-  var c=document.createElement("canvas");
-  c.width=180;c.height=180;
-  var x=c.getContext("2d");
-  var r=36;
-  x.beginPath();
-  x.moveTo(r,0);x.lineTo(180-r,0);x.arcTo(180,0,180,r,r);
-  x.lineTo(180,180-r);x.arcTo(180,180,180-r,180,r);
-  x.lineTo(r,180);x.arcTo(0,180,0,180-r,r);
-  x.lineTo(0,r);x.arcTo(0,0,r,0,r);
-  x.closePath();
-  x.fillStyle="#4DD0B1";x.fill();
-  x.fillStyle="#0B1F1C";
-  x.font="bold 82px -apple-system,Arial,sans-serif";
-  x.textAlign="center";x.textBaseline="middle";
-  x.fillText("KP",90,94);
-  var l=document.createElement("link");
-  l.rel="apple-touch-icon";
-  l.href=c.toDataURL("image/png");
-  document.head.appendChild(l);
-})();
-</script>
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAADnklEQVR42u3dwW3bQBBAUd3TQoBU5GLVSTqykQZ8SMLlzOcT8M8Whg+2Re6uXq+hr4/f70/N7eUFLPAAC3CQBTbIAhtkZWG7OMrAdkGUQO0iKAPb4JVBbeDKoDZoZVAbsDKoDVYZ1AaqDGqDVAq1ISoD2gCVQW1wSqE2NGVAG5hSqA1LGdAGpRRqQ1IGtAEphdpwlAFtMEqhNhQBLQEtXQzaQJRCbRgCWgJaAloCWkBLQEujQBuEUqgN4ft+/Pr5T5kh0BnMQAOdwgw00CnMQAOdwgw00CnMQAOdwgx0CPQ2EKdAX/VzTgX0ggGeBAA00GsxAw300QHeAQBooNdiBhroIwO8EwDQQK/FDDTQlw5wAgCggc5gBhroFGaggU5hBhro9R8CgQb6vw1w4sUGGugMZqCBTmEGGugUZqCBTmEGGugU5s27ybegToDe9JuqAHoy6vWgt/3ZrYCeCns16I3/Q9ZAT4O9FvTWD0RV0FNQA7101d/kYx6AHr4E05l57zW399aB3n7f9Smg70K9CnThIcKTQN/xPteArjwRexro0+91BejS490ngj75fseDrq1VABpooIEGun4wJNBAp47tBRroETiABjq1YN1tO6BTuy88WAE6tZXIo2+gU/viLE4COrXJ0/JRoFM7li3wBzq1/d4WLKCBtkkW6KlDd4wB0KmTfpycBHRq+EADnRo80ED7DQ000P6HBtpdDqCBdh8aaKA9+gYaaIuTzA/o7PJRoIFOLfAHGujUFiyggU5tkgUaaKCBdi4H0EA7OQlooJ1t14IFtNNHgXbguQPP5SspfCUF0L40CGig14P2tW5AX37htqMGGugUaqCBHoEaaKAvv3AbUQMNdAo10ECnUAMNdAo10ECnUAMNdAo10ECnUAMN9Iqlq0ADveLD19Q7MvA+DPRU1EADvQo10ECvedw86XE9vA8GPQk10ECnUAMNdAo10ECvRg000Kt2XwMNdO6MDKCBBhpooDeiBhrotQcoAh0Gva2nHj8LNNRAA/1c1GYKdAq1eQKdQm2WQKdQmyPQKdRmCHQKtfkdBv3nZRDKYAZaQEtAS0BLQAtoAxHQ0kjQUCuFGWgBLQEtHQINtVKYgVYONNRKYQZaOdBQK4UZaOVAQ60UZqCVAw21UpihVg4z0MqBhlopzFArhxlq5TBDrRxmqJXDDLVymKFWDjPYykGGWknMYCsHGWwlIYOtJGSwlYQMOMBewAP7l68vdR55GAs91eMAAAAASUVORK5CYII=">
 <style>
 *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:#0B1F1C;color:#F4F1EA;font-family:-apple-system,'Inter',sans-serif}
