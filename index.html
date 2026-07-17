@@ -138,6 +138,19 @@ function salaryMonths(since){
   return c;
 }
 
+// Dinamikus szín interpoláció (zöld → sárga → narancs → piros)
+function barColor(pct){
+  const p=Math.min(1,pct/100);
+  const stops=[[0,[77,208,177]],[0.55,[255,214,0]],[0.8,[255,138,101]],[1,[255,60,60]]];
+  let f=stops[0],t=stops[1];
+  for(let i=0;i<stops.length-1;i++){if(p>=stops[i][0]&&p<=stops[i+1][0]){f=stops[i];t=stops[i+1];break;}}
+  const r=t[0]>f[0]?(p-f[0])/(t[0]-f[0]):1;
+  const lerp=(a,b)=>Math.round(a+(b-a)*r);
+  return`rgb(${lerp(f[1][0],t[1][0])},${lerp(f[1][1],t[1][1])},${lerp(f[1][2],t[1][2])})`;
+}
+
+const PERSON_COLOR={'Attila':'#4FC3F7','Szandra':'#F48FB1'};
+
 const DEF=[
   {id:'d0',type:'income',label:'Szandra',amount:650000,group:'Bevétel'},
   {id:'d1',type:'income',label:'Ati',amount:650000,group:'Bevétel'},
@@ -174,6 +187,7 @@ const ls=(k,v)=>{try{localStorage.setItem(K+k,JSON.stringify(v));}catch(_){}};
 let S={
   entered:false,
   items:[],groupOrder:null,customGroups:[],savingsEntries:[],savingsStart:null,
+  actualPayments:[],dismissedSavingsPeriods:[],actualPerson:'Attila',
   modal:null,editingId:null,formType:'expense',formGroup:'Rezsi',
   draggingGroup:null,draggingItem:null,
 };
@@ -187,6 +201,8 @@ function loadData(){
   S.savingsEntries=lg('savingsEntries')||[];
   S.savingsStart=lg('savingsStart')||(new Date().toISOString().slice(0,7)+'-01');
   if(!lg('savingsStart'))ls('savingsStart',S.savingsStart);
+  S.actualPayments=lg('actual')||[];
+  S.dismissedSavingsPeriods=lg('dismissedSav')||[];
 }
 
 // Computed
@@ -204,6 +220,117 @@ function getMFS(){return S.items.filter(i=>i.type==='expense'&&i.group==='Megtak
 function getST(){return salaryMonths(S.savingsStart)*getMFS()+S.savingsEntries.reduce((s,e)=>s+e.amount,0);}
 function getSugg(){const s=new Set(Object.keys(GM));S.customGroups.forEach(g=>s.add(g));S.items.forEach(i=>s.add(i.group));s.delete('Bevétel');return[...s];}
 
+// Tényleges kiadás időszak: az aktuális hónap 5. munkanapjától indul
+function getPeriodStart(){
+  const now=new Date();
+  const fbdNow=new Date(now.getFullYear(),now.getMonth(),fbd(now.getFullYear(),now.getMonth()));
+  if(now>=fbdNow) return fbdNow;
+  const pm=now.getMonth()===0?11:now.getMonth()-1;
+  const py=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
+  return new Date(py,pm,fbd(py,pm));
+}
+function getActualSpent(){
+  const ps=getPeriodStart(), psKey=ps.toISOString().slice(0,10);
+  const manual=S.actualPayments.filter(p=>new Date(p.date)>=ps).reduce((s,p)=>s+p.amount,0);
+  const dismissed=S.dismissedSavingsPeriods.includes(psKey);
+  return manual+(dismissed?0:getMFS());
+}
+function getBudget(){return getAT();}
+function getPeriodPayments(){
+  const ps=getPeriodStart(), psKey=ps.toISOString().slice(0,10);
+  const manual=S.actualPayments.filter(p=>new Date(p.date)>=ps).sort((a,b)=>b.date.localeCompare(a.date));
+  const dismissed=S.dismissedSavingsPeriods.includes(psKey);
+  if(!dismissed&&getMFS()>0) manual.unshift({id:'__sav__',amount:getMFS(),label:'💎 Megtakarítás',date:psKey,auto:true});
+  return manual;
+}
+
+function renderActual(){
+  const spent=getActualSpent(), budget=getBudget(), rem=Math.max(0,budget-spent);
+  const over=spent>budget;
+  const pct=budget>0?Math.min(100,spent/budget*100):0;
+  const bc=barColor(pct);
+  const spentColor=over?'#FF5252':'#F4F1EA';
+  const ps=getPeriodStart();
+  const psStr=ps.toLocaleDateString('hu-HU',{month:'long',day:'numeric'});
+  const payments=getPeriodPayments();
+
+  const rows=payments.map(p=>{
+    const pc=PERSON_COLOR[p.person]||'#9AA8A5';
+    const personBadge=p.person&&!p.auto?`<span style="font-size:10px;padding:1px 6px;border-radius:99px;background:${pc}22;color:${pc};font-weight:600;margin-left:4px">${p.person}</span>`:'';
+    const autoTag=p.auto?` <span style="font-size:10px;color:#6B7B78;font-weight:400">auto</span>`:'';
+    return`<div class="row">
+      <div class="row-main">
+        <div class="row-lbl">${esc(p.label)}${autoTag}${personBadge}</div>
+        <div class="row-meta">${new Date(p.date).toLocaleDateString('hu-HU',{month:'short',day:'numeric'})}</div>
+      </div>
+      <div class="row-amt" style="color:${p.auto?'#81C784':'#FF8A65'}">−${fmt(p.amount)}</div>
+      <button class="ico-btn" onclick="A.delActual('${p.id}')">${IC.trash}</button>
+    </div>`;
+  }).join('');
+
+  return`<div class="section" style="margin-bottom:40px">
+    <div class="sec-title">Tényleges kiadások</div>
+    <div class="gc">
+      <div class="gc-bar" style="background:${bc};transition:background .5s"></div>
+      <div class="gc-in">
+        <div style="text-align:center;padding:12px 0 16px">
+          <div style="font-size:11px;color:#9AA8A5;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Elköltve</div>
+          <div style="font-size:clamp(26px,8vw,36px);font-weight:800;color:${spentColor};letter-spacing:-1.5px;line-height:1">${fmt(spent)}</div>
+          <div style="font-size:13px;margin-top:8px;color:#6B7B78">
+            ${fmt(budget)} keretből
+            ${over
+              ?` · <span style="color:#FF5252;font-weight:700">+${fmt(spent-budget)} túlköltés</span>`
+              :` · <span style="color:#9AA8A5">marad ${fmt(rem)}</span>`}
+          </div>
+        </div>
+        <div style="margin-bottom:18px">
+          <div style="height:16px;background:#1A2925;border-radius:10px;overflow:hidden;box-shadow:inset 0 1px 3px rgba(0,0,0,.3)">
+            <div style="width:${pct}%;height:100%;background:${bc};border-radius:10px;transition:width .5s ease,background .5s"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:6px;color:#6B7B78">
+            <span>${psStr} óta</span>
+            <span style="color:${bc};font-weight:600">${Math.round(pct)}%</span>
+          </div>
+        </div>
+
+        <!-- Személyes bontás -->
+        ${(()=>{
+          const pps=getPeriodPayments();
+          const attila=pps.filter(p=>p.person==='Attila').reduce((s,p)=>s+p.amount,0);
+          const szandra=pps.filter(p=>p.person==='Szandra').reduce((s,p)=>s+p.amount,0);
+          const half=budget/2||1;
+          const aP=Math.min(100,attila/half*100);
+          const sP=Math.min(100,szandra/half*100);
+          const aColor=PERSON_COLOR['Attila'], sColor=PERSON_COLOR['Szandra'];
+          function personBar(name,amt,pct,color){
+            return`<div style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="width:8px;height:8px;border-radius:50%;background:${color};display:inline-block"></span>
+                  <span style="font-size:13px;font-weight:600;color:${color}">${name}</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:13px;font-weight:700;color:#F4F1EA">${fmt(amt)}</span>
+                  <span style="font-size:11px;color:#6B7B78;min-width:28px;text-align:right">${Math.round(pct)}%</span>
+                </div>
+              </div>
+              <div style="height:8px;background:#1A2925;border-radius:6px;overflow:hidden">
+                <div style="width:${pct}%;height:100%;background:${color};border-radius:6px;transition:width .5s,background .5s"></div>
+              </div>
+            </div>`;
+          }
+          return`<div style="margin-bottom:14px;padding-top:4px">
+            ${personBar('Attila',attila,aP,aColor)}
+            ${personBar('Szandra',szandra,sP,sColor)}
+          </div>`;
+        })()}
+        ${rows.length?`<div class="sub-ttl">Tételek</div>${rows}`:''}
+        <button class="ghost" onclick="A.newActual()">${IC.plus} Kiadás rögzítése</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 // Render
 function render(){
   const r=document.getElementById('root');
@@ -215,7 +342,7 @@ function renderWelcome(){
   return`<div class="welcome"><div class="welcome-card">
     <div class="kp-lg">KP</div>
     <h1 class="w-title">Közös Pénztárca</h1>
-    <p class="w-sub">Szandra & Ati közös havi büdzséje</p>
+    <p class="w-sub">Szandra és Ati közös havi büdzséje</p>
     <button class="w-btn" onclick="A.enter()">Megnyitás</button>
   </div></div>`;
 }
@@ -225,7 +352,7 @@ function renderMain(){
   const ii=S.items.filter(i=>i.type==='income');
 
   // Alloc bars
-  let bars=ge.map(g=>{
+  let bars=[...ge].sort((a,b)=>b.total-a.total).map(g=>{
     const pct=ti>0?Math.round(g.total/ti*100):0;
     const w=ti?Math.min(100,g.total/ti*100):0;
     return`<div class="cat-row"><div class="cat-top"><span class="cat-lbl"><span class="cat-ico">${g.icon}</span>${esc(g.name)}</span><span class="cat-amt">${fmt(g.total)}<span class="cat-pct"> · ${pct}%</span></span></div><div class="bar-track"><div class="bar-fill" style="width:${w}%;background:${g.color}"></div></div></div>`;
@@ -323,6 +450,21 @@ function renderMain(){
     </div>
   </div>`;
 
+  const ap=S.actualPerson||'Attila';
+  const mActual=`<div class="overlay${S.modal==='actual'?'':' hidden'}" onclick="if(event.target===this)A.close()">
+    <div class="modal">
+      <div class="m-head"><div class="m-title">📊 Kiadás rögzítése</div><button class="x-btn" onclick="A.close()">${IC.x}</button></div>
+      <div class="tog-row">
+        <button class="tog${ap==='Attila'?' ai':''}" style="${ap==='Attila'?'background:#4FC3F722;border-color:#4FC3F7;color:#4FC3F7':''}" onclick="A.setPerson('Attila')">Attila</button>
+        <button class="tog${ap==='Szandra'?' ai':''}" style="${ap==='Szandra'?'background:#F48FB122;border-color:#F48FB1;color:#F48FB1':''}" onclick="A.setPerson('Szandra')">Szandra</button>
+      </div>
+      <input id="aa" class="finput" type="number" inputmode="decimal" placeholder="Összeg (Ft)">
+      <input id="al" class="finput" type="text" placeholder="Megnevezés (pl. bevásárlás, benzin)">
+      <input id="ad" class="finput" type="date" value="${today()}">
+      <button class="sub-btn" onclick="A.submitActual()">Rögzítés</button>
+    </div>
+  </div>`;
+
   return`<div class="app">
     <div class="topbar"><div class="kp-sm">KP</div><span class="tb-title">Közös Pénztárca</span><button class="tb-btn" onclick="A.openSync()">${IC.sync}</button></div>
     <div class="sav-hero"><div class="sav-label">Megtakarítás</div><div class="sav-amt">${fmt(st)}</div></div>
@@ -346,8 +488,8 @@ function renderMain(){
       </div></div>
       <button class="ghost-out" onclick="A.newItem('expense')">${IC.plus} Új csoport / tétel</button>
     </div>
-    <button class="fab" onclick="A.newItem('expense')">${IC.plusLg}</button>
-    ${mForm}${mSav}${mSync}
+    ${renderActual()}
+    ${mForm}${mSav}${mSync}${mActual}
   </div>`;
 }
 
@@ -426,6 +568,26 @@ window.A={
   },
   delSav(id){S.savingsEntries=S.savingsEntries.filter(e=>e.id!==id);ls('savingsEntries',S.savingsEntries);render();},
   openSync(){S.modal='sync';render();},
+  setPerson(p){S.actualPerson=p;render();},
+  newActual(){S.modal='actual';render();setTimeout(()=>document.getElementById('aa')?.focus(),100);},
+  submitActual(){
+    const amt=parseFloat(document.getElementById('aa')?.value);
+    const lbl=document.getElementById('al')?.value.trim()||'Kiadás';
+    const dt=document.getElementById('ad')?.value||today();
+    const person=S.actualPerson||'Attila';
+    if(!amt||amt<=0)return;
+    S.actualPayments.unshift({id:Date.now().toString(),amount:amt,label:lbl,date:dt,person});
+    ls('actual',S.actualPayments);S.modal=null;render();
+  },
+  delActual(id){
+    if(id==='__sav__'){
+      const psKey=getPeriodStart().toISOString().slice(0,10);
+      if(!S.dismissedSavingsPeriods.includes(psKey)){S.dismissedSavingsPeriods.push(psKey);ls('dismissedSav',S.dismissedSavingsPeriods);}
+    } else {
+      S.actualPayments=S.actualPayments.filter(p=>p.id!==id);ls('actual',S.actualPayments);
+    }
+    render();
+  },
   exp(){
     const d={};['items','groupOrder','customGroups','savingsEntries','savingsStart'].forEach(k=>{const v=localStorage.getItem(K+k);if(v)d[k]=v;});
     const j=JSON.stringify(d);
