@@ -8,7 +8,26 @@
 <meta name="apple-mobile-web-app-title" content="KP">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0B1F1C">
-<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAADnklEQVR42u3dwW3bQBBAUd3TQoBU5GLVSTqykQZ8SMLlzOcT8M8Whg+2Re6uXq+hr4/f70/N7eUFLPAAC3CQBTbIAhtkZWG7OMrAdkGUQO0iKAPb4JVBbeDKoDZoZVAbsDKoDVYZ1AaqDGqDVAq1ISoD2gCVQW1wSqE2NGVAG5hSqA1LGdAGpRRqQ1IGtAEphdpwlAFtMEqhNhQBLQEtXQzaQJRCbRgCWgJaAloCWkBLQEujQBuEUqgN4ft+/Pr5T5kh0BnMQAOdwgw00CnMQAOdwgw00CnMQAOdwgx0CPQ2EKdAX/VzTgX0ggGeBAA00GsxAw300QHeAQBooNdiBhroIwO8EwDQQK/FDDTQlw5wAgCggc5gBhroFGaggU5hBhro9R8CgQb6vw1w4sUGGugMZqCBTmEGGugUZqCBTmEGGugU5s27ybegToDe9JuqAHoy6vWgt/3ZrYCeCns16I3/Q9ZAT4O9FvTWD0RV0FNQA7101d/kYx6AHr4E05l57zW399aB3n7f9Smg70K9CnThIcKTQN/xPteArjwRexro0+91BejS490ngj75fseDrq1VABpooIEGun4wJNBAp47tBRroETiABjq1YN1tO6BTuy88WAE6tZXIo2+gU/viLE4COrXJ0/JRoFM7li3wBzq1/d4WLKCBtkkW6KlDd4wB0KmTfpycBHRq+EADnRo80ED7DQ000P6HBtpdDqCBdh8aaKA9+gYaaIuTzA/o7PJRoIFOLfAHGujUFiyggU5tkgUaaKCBdi4H0EA7OQlooJ1t14IFtNNHgXbguQPP5SspfCUF0L40CGig14P2tW5AX37htqMGGugUaqCBHoEaaKAvv3AbUQMNdAo10ECnUAMNdAo10ECnUAMNdAo10ECnUAMN9Iqlq0ADveLD19Q7MvA+DPRU1EADvQo10ECvedw86XE9vA8GPQk10ECnUAMNdAo10ECvRg000Kt2XwMNdO6MDKCBBhpooDeiBhrotQcoAh0Gva2nHj8LNNRAA/1c1GYKdAq1eQKdQm2WQKdQmyPQKdRmCHQKtfkdBv3nZRDKYAZaQEtAS0BLQAtoAxHQ0kjQUCuFGWgBLQEtHQINtVKYgVYONNRKYQZaOdBQK4UZaOVAQ60UZqCVAw21UpihVg4z0MqBhlopzFArhxlq5TBDrRxmqJXDDLVymKFWDjPYykGGWknMYCsHGWwlIYOtJGSwlYQMOMBewAP7l68vdR55GAs91eMAAAAASUVORK5CYII=">
+<script>
+(function(){
+  var c=document.createElement('canvas');c.width=180;c.height=180;
+  var x=c.getContext('2d');
+  var r=40;x.beginPath();x.moveTo(r,0);x.lineTo(180-r,0);x.arcTo(180,0,180,r,r);
+  x.lineTo(180,180-r);x.arcTo(180,180,180-r,180,r);x.lineTo(r,180);x.arcTo(0,180,0,180-r,r);
+  x.lineTo(0,r);x.arcTo(0,0,r,0,r);x.closePath();x.clip();
+  var g=x.createLinearGradient(0,0,180,180);g.addColorStop(0,'#0D2318');g.addColorStop(1,'#1A3D2A');
+  x.fillStyle=g;x.fillRect(0,0,180,180);
+  x.beginPath();x.arc(90,90,70,0,Math.PI*2);x.strokeStyle='#4DD0B1';x.lineWidth=6;x.globalAlpha=.35;x.stroke();
+  x.beginPath();x.arc(90,90,62,0,Math.PI*2);x.lineWidth=1.5;x.globalAlpha=.2;x.stroke();
+  x.globalAlpha=1;x.fillStyle='#4DD0B1';x.font='900 64px Arial Black,Arial,sans-serif';
+  x.textAlign='center';x.textBaseline='middle';x.fillText('KP',90,94);
+  x.globalAlpha=.5;x.fillStyle='#4DD0B1';
+  x.beginPath();x.arc(90,13,3.5,0,Math.PI*2);x.fill();
+  x.beginPath();x.arc(90,167,3.5,0,Math.PI*2);x.fill();x.globalAlpha=1;
+  var l=document.createElement('link');l.rel='apple-touch-icon';l.href=c.toDataURL('image/png');
+  document.head.appendChild(l);
+})();
+</script>
 <style>
 *,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:#0B1F1C;color:#F4F1EA;font-family:-apple-system,'Inter',sans-serif}
@@ -17,12 +36,12 @@ button{cursor:pointer}
 .app{min-height:100dvh;padding:max(22px,env(safe-area-inset-top)) clamp(16px,4vw,24px) calc(110px + env(safe-area-inset-bottom));max-width:480px;margin:0 auto;overflow-x:hidden}
 .welcome{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px}
 .welcome-card{width:100%;max-width:320px;text-align:center}
-.kp-lg{width:72px;height:72px;border-radius:20px;background:#4DD0B1;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#0B1F1C;letter-spacing:-1px;margin:0 auto 22px}
+.kp-lg{width:72px;height:72px;border-radius:20px;background:linear-gradient(135deg,#0D2318,#1A3D2A);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#4DD0B1;letter-spacing:-1px;margin:0 auto 22px;box-shadow:0 0 0 3px rgba(77,208,177,.3),0 8px 24px rgba(0,0,0,.4);position:relative;overflow:hidden}
 .w-title{font-size:28px;font-weight:700;margin:0 0 8px}
 .w-sub{font-size:16px;color:#9AA8A5;margin-bottom:34px;line-height:1.5}
 .w-btn{width:100%;padding:17px;border-radius:16px;border:none;background:#4DD0B1;color:#0B1F1C;font-weight:700;font-size:17px}
 .topbar{display:flex;align-items:center;gap:10px;margin-bottom:22px}
-.kp-sm{width:36px;height:36px;border-radius:10px;background:#4DD0B1;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#0B1F1C;letter-spacing:-0.5px;flex-shrink:0}
+.kp-sm{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#0D2318,#1A3D2A);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#4DD0B1;letter-spacing:-0.5px;flex-shrink:0;box-shadow:0 0 0 1.5px rgba(77,208,177,.35),0 4px 12px rgba(0,0,0,.3)}
 .tb-title{font-size:16px;font-weight:700;flex:1}
 .tb-btn{background:none;border:none;padding:4px;display:flex}
 .sav-hero{display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,#1A3A2E,#0F2920);border:1px solid #2A5040;border-radius:18px;padding:17px 18px;margin-bottom:12px}
@@ -339,12 +358,23 @@ function render(){
 }
 
 function renderWelcome(){
-  return`<div class="welcome"><div class="welcome-card">
-    <div class="kp-lg">KP</div>
-    <h1 class="w-title">Közös Pénztárca</h1>
-    <p class="w-sub">Szandra és Ati közös havi büdzséje</p>
-    <button class="w-btn" onclick="A.enter()">Megnyitás</button>
-  </div></div>`;
+  return`<div class="welcome" style="flex-direction:column;gap:32px">
+    <div style="text-align:center">
+      <svg onclick="A.enter()" width="160" height="160" viewBox="0 0 180 180" style="display:block;margin:0 auto;border-radius:36px;box-shadow:0 0 0 2px rgba(77,208,177,.2),0 20px 60px rgba(0,0,0,.6);cursor:pointer" xmlns="http://www.w3.org/2000/svg">
+        <defs><linearGradient id="wbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0D2318"/><stop offset="100%" stop-color="#1A3D2A"/></linearGradient><clipPath id="wrr"><rect width="180" height="180" rx="40"/></clipPath></defs>
+        <rect width="180" height="180" rx="40" fill="url(#wbg)"/>
+        <g clip-path="url(#wrr)">
+          <circle cx="90" cy="90" r="70" fill="none" stroke="#4DD0B1" stroke-width="6" opacity="0.35"/>
+          <circle cx="90" cy="90" r="62" fill="none" stroke="#4DD0B1" stroke-width="1.5" opacity="0.2"/>
+          <text x="90" y="94" text-anchor="middle" dominant-baseline="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="64" fill="#4DD0B1">KP</text>
+          <circle cx="90" cy="13" r="3.5" fill="#4DD0B1" opacity="0.5"/>
+          <circle cx="90" cy="167" r="3.5" fill="#4DD0B1" opacity="0.5"/>
+        </g>
+      </svg>
+      <div style="margin-top:28px;font-size:22px;font-weight:700;color:#F4F1EA">Közös Pénztárca</div>
+      <div style="margin-top:8px;font-size:14px;color:#6B7B78">Koppints a megnyitáshoz</div>
+    </div>
+  </div>`;
 }
 
 function renderMain(){
@@ -466,7 +496,17 @@ function renderMain(){
   </div>`;
 
   return`<div class="app">
-    <div class="topbar"><div class="kp-sm">KP</div><span class="tb-title">Közös Pénztárca</span><button class="tb-btn" onclick="A.openSync()">${IC.sync}</button></div>
+    <div class="topbar"><svg class="kp-sm" width="36" height="36" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="cbg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0D2318"/><stop offset="100%" stop-color="#1A3D2A"/></linearGradient><clipPath id="crr2"><rect width="180" height="180" rx="40"/></clipPath></defs>
+  <rect width="180" height="180" rx="40" fill="url(#cbg2)"/>
+  <g clip-path="url(#crr2)">
+    <circle cx="90" cy="90" r="70" fill="none" stroke="#4DD0B1" stroke-width="6" opacity="0.35"/>
+    <circle cx="90" cy="90" r="62" fill="none" stroke="#4DD0B1" stroke-width="1.5" opacity="0.2"/>
+    <text x="90" y="94" text-anchor="middle" dominant-baseline="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="64" fill="#4DD0B1">KP</text>
+    <circle cx="90" cy="13" r="3.5" fill="#4DD0B1" opacity="0.5"/>
+    <circle cx="90" cy="167" r="3.5" fill="#4DD0B1" opacity="0.5"/>
+  </g>
+</svg><span class="tb-title">Közös Pénztárca</span><button class="tb-btn" onclick="A.openSync()">${IC.sync}</button></div>
     <div class="sav-hero"><div class="sav-label">Megtakarítás</div><div class="sav-amt">${fmt(st)}</div></div>
     <div class="hero-row">
       <div class="hero-card inc"><div class="h-label">💰 Bevétel</div><div class="h-val" style="color:#4DD0B1">${fmt(ti)}</div></div>
