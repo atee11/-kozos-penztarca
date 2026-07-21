@@ -111,6 +111,7 @@ button{cursor:pointer}
 </style>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 </head>
 <body style="margin:0;background:#0B1F1C;color:#F4F1EA;font-family:-apple-system,'Inter',sans-serif">
 <div id="root" style="background:#0B1F1C;min-height:100dvh"></div>
@@ -208,6 +209,8 @@ const FB_CONFIG={
 };
 firebase.initializeApp(FB_CONFIG);
 const DB=firebase.database().ref('kp');
+const AUTH=firebase.auth();
+const PROVIDER=new firebase.auth.GoogleAuthProvider();
 
 const K='kp__';
 const toArr=v=>!v?[]:Array.isArray(v)?v:Object.values(v);
@@ -224,7 +227,7 @@ const lg=k=>{try{const v=localStorage.getItem(K+k);return v?JSON.parse(v):null;}
 let S={
   entered:false,
   items:[],groupOrder:null,customGroups:[],savingsEntries:[],savingsStart:null,savingsWithdrawals:[],
-  actualPayments:[],dismissedSavingsPeriods:[],actualPerson:'Attila',
+  actualPayments:[],dismissedSavingsPeriods:[],actualPerson:'Attila',user:null,authError:null,
   modal:null,editingId:null,formType:'expense',formGroup:'Rezsi',
   draggingGroup:null,draggingItem:null,
 };
@@ -377,9 +380,10 @@ function render(){
 }
 
 function renderWelcome(){
+  const errMsg = S.authError ? `<div style="color:#FF8A65;font-size:13px;margin-top:12px">${esc(S.authError)}</div>` : '';
   return`<div class="welcome" style="flex-direction:column;gap:32px">
     <div style="text-align:center">
-      <svg onclick="A.enter()" width="160" height="160" viewBox="0 0 180 180" style="display:block;margin:0 auto;border-radius:36px;box-shadow:0 0 0 2px rgba(77,208,177,.2),0 20px 60px rgba(0,0,0,.6);cursor:pointer" xmlns="http://www.w3.org/2000/svg">
+      <svg width="160" height="160" viewBox="0 0 180 180" style="display:block;margin:0 auto;border-radius:36px;box-shadow:0 0 0 2px rgba(77,208,177,.2),0 20px 60px rgba(0,0,0,.6)" xmlns="http://www.w3.org/2000/svg">
         <defs><linearGradient id="wbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0D2318"/><stop offset="100%" stop-color="#1A3D2A"/></linearGradient><clipPath id="wrr"><rect width="180" height="180" rx="40"/></clipPath></defs>
         <rect width="180" height="180" rx="40" fill="url(#wbg)"/>
         <g clip-path="url(#wrr)">
@@ -391,7 +395,12 @@ function renderWelcome(){
         </g>
       </svg>
       <div style="margin-top:28px;font-size:22px;font-weight:700;color:#F4F1EA">Közös Pénztárca</div>
-      <div style="margin-top:8px;font-size:14px;color:#6B7B78">Koppints a megnyitáshoz</div>
+      <div style="margin-top:8px;font-size:14px;color:#6B7B78">Szandra és Ati közös havi büdzséje</div>
+      <button onclick="A.enter()" style="margin-top:28px;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:280px;margin-left:auto;margin-right:auto;padding:14px 20px;border-radius:14px;border:none;background:#F4F1EA;color:#1A1A1A;font-size:15px;font-weight:600;cursor:pointer">
+        <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Belépés Google fiókkal
+      </button>
+      ${errMsg}
     </div>
   </div>`;
 }
@@ -643,8 +652,10 @@ document.addEventListener('touchend',()=>{
 // App controller
 window.A={
   enter(){
+    AUTH.signInWithRedirect(PROVIDER);
+  },
+  setupListener(){
     S.entered=true;loadData();render();
-    // Real-time Firebase listener — frissít ha a másik fél változtat
     DB.on('value',snap=>{
       if(!snap.exists())return;
       const d=snap.val();
@@ -732,6 +743,34 @@ window.A={
     catch(_){if(m)m.textContent='❌ Érvénytelen adat.';}
   },
 };
+
+const ALLOWED = ['toman.ati@gmail.com','ferencz.szandra@gmail.com'];
+
+// Auth state — ez fut le az oldal betöltésekor
+AUTH.onAuthStateChanged(user => {
+  if (user && ALLOWED.includes(user.email)) {
+    // Engedélyezett felhasználó
+    S.user = user;
+    window.app.setupListener();
+  } else if (user && !ALLOWED.includes(user.email)) {
+    // Nem engedélyezett fiók — kijelentkeztetés
+    AUTH.signOut();
+    S.authError = 'Ez a fiók nincs engedélyezve. Kérlek a saját Gmail fiókodból lépj be.';
+    S.entered = false;
+    render();
+  } else {
+    // Nincs bejelentkezve
+    S.entered = false;
+    render();
+  }
+});
+
+// Redirect result kezelése (Google visszairányítás után)
+AUTH.getRedirectResult().catch(err => {
+  console.error('Auth error:', err);
+  S.authError = 'Bejelentkezési hiba. Próbáld újra.';
+  render();
+});
 
 render();
 </script>
