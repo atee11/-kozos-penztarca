@@ -109,6 +109,8 @@ button{cursor:pointer}
 .sync-msg{font-size:13px;color:#9AA8A5;margin-top:12px;line-height:1.5}
 .mt16{margin-top:16px}
 </style>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body style="margin:0;background:#0B1F1C;color:#F4F1EA;font-family:-apple-system,'Inter',sans-serif">
 <div id="root" style="background:#0B1F1C;min-height:100dvh"></div>
@@ -197,15 +199,31 @@ const DEF=[
   {id:'d23',type:'expense',label:'Havi megtakarítás',amount:300000,group:'Megtakarítás'},
 ];
 
-// Storage
+// Firebase + localStorage storage
+const FB_CONFIG={
+  apiKey:"AIzaSyDlJo25o80IqNYgxGM2AUXRYvsw72Dzb3o",
+  databaseURL:"https://kozos-penztarca-0411-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"kozos-penztarca-0411",
+  appId:"1:41177787341:web:46ec03aa2219dcbf57b284"
+};
+firebase.initializeApp(FB_CONFIG);
+const DB=firebase.database().ref('kp');
+
 const K='kp__';
+const toArr=v=>!v?[]:Array.isArray(v)?v:Object.values(v);
+
+// Save to Firebase + localStorage cache
+const ls=(k,v)=>{
+  try{localStorage.setItem(K+k,JSON.stringify(v));}catch(_){}
+  try{DB.child(k).set(v);}catch(_){}
+};
+// Load from localStorage (Firebase listener handles real-time updates)
 const lg=k=>{try{const v=localStorage.getItem(K+k);return v?JSON.parse(v):null;}catch(_){return null;}};
-const ls=(k,v)=>{try{localStorage.setItem(K+k,JSON.stringify(v));}catch(_){}};
 
 // State
 let S={
   entered:false,
-  items:[],groupOrder:null,customGroups:[],savingsEntries:[],savingsStart:null,
+  items:[],groupOrder:null,customGroups:[],savingsEntries:[],savingsStart:null,savingsWithdrawals:[],
   actualPayments:[],dismissedSavingsPeriods:[],actualPerson:'Attila',
   modal:null,editingId:null,formType:'expense',formGroup:'Rezsi',
   draggingGroup:null,draggingItem:null,
@@ -216,8 +234,9 @@ function loadData(){
   S.items=items&&items.length>0?items:DEF;
   if(!items||!items.length)ls('items',S.items);
   S.groupOrder=lg('groupOrder');
-  S.customGroups=lg('customGroups')||[];
-  S.savingsEntries=lg('savingsEntries')||[];
+  S.customGroups=toArr(lg('customGroups'));
+  S.savingsEntries=toArr(lg('savingsEntries'));
+  S.savingsWithdrawals=lg('savingsWithdrawals')||[];
   S.savingsStart=lg('savingsStart')||(new Date().toISOString().slice(0,7)+'-01');
   if(!lg('savingsStart'))ls('savingsStart',S.savingsStart);
   S.actualPayments=lg('actual')||[];
@@ -236,7 +255,7 @@ function getGE(){
 function getAT(){return getGE().reduce((s,g)=>s+g.total,0);}
 function getZPP(){return Math.max(0,(getTI()-getAT())/2);}
 function getMFS(){return S.items.filter(i=>i.type==='expense'&&i.group==='Megtakarítás').reduce((s,i)=>s+i.amount,0);}
-function getST(){return salaryMonths(S.savingsStart)*getMFS()+S.savingsEntries.reduce((s,e)=>s+e.amount,0);}
+function getST(){return salaryMonths(S.savingsStart)*getMFS()+S.savingsEntries.reduce((s,e)=>s+e.amount,0)-S.savingsWithdrawals.reduce((s,e)=>s+e.amount,0);}
 function getSugg(){const s=new Set(Object.keys(GM));S.customGroups.forEach(g=>s.add(g));S.items.forEach(i=>s.add(i.group));s.delete('Bevétel');return[...s];}
 
 // Tényleges kiadás időszak: az aktuális hónap 5. munkanapjától indul
@@ -409,12 +428,46 @@ function renderMain(){
       <button class="ico-btn" onclick="A.del('${it.id}')">${IC.trash}</button>
     </div>`).join('');
     let savR='';
-    if(g.name==='Megtakarítás'&&S.savingsEntries.length>0){
-      savR=`<div class="sub-ttl">Egyedi befizetések</div>`+S.savingsEntries.map(e=>`<div class="row">
-        <div class="row-main"><div class="row-lbl">${esc(e.label)}</div><div class="row-meta">${new Date(e.date).toLocaleDateString('hu-HU',{month:'short',day:'numeric'})}</div></div>
-        <div class="row-amt" style="color:#81C784">+${fmt(e.amount)}</div>
-        <button class="ico-btn" onclick="A.delSav('${e.id}')">${IC.trash}</button>
+    if(g.name==='Megtakarítás'){
+      const savRows=g.items.map(it=>`<div class="row">
+        <span class="grip" data-gi="${it.id}" data-gg="${esc(g.name)}">${IC.grip}</span>
+        <div class="row-main"><div class="row-lbl">${esc(it.label)}</div></div>
+        <div class="row-amt" style="color:#81C784">+${fmt(it.amount)}</div>
+        <button class="ico-btn" onclick="A.edit('${it.id}')">${IC.pencil}</button>
+        <button class="ico-btn" onclick="A.del('${it.id}')">${IC.trash}</button>
       </div>`).join('');
+      let extraRows='';
+      if(S.savingsEntries.length>0){
+        extraRows=`<div class="sub-ttl">Egyedi befizetések</div>`+S.savingsEntries.map(e=>`<div class="row">
+          <div class="row-main"><div class="row-lbl">${esc(e.label)}</div><div class="row-meta">${new Date(e.date).toLocaleDateString('hu-HU',{month:'short',day:'numeric'})}</div></div>
+          <div class="row-amt" style="color:#81C784">+${fmt(e.amount)}</div>
+          <button class="ico-btn" onclick="A.delSav('${e.id}')">${IC.trash}</button>
+        </div>`).join('');
+      }
+      let withdrawRows='';
+      if(S.savingsWithdrawals.length>0){
+        withdrawRows=`<div class="sub-ttl">Kivétek</div>`+S.savingsWithdrawals.map(e=>`<div class="row">
+          <div class="row-main"><div class="row-lbl">${esc(e.label)}</div><div class="row-meta">${new Date(e.date).toLocaleDateString('hu-HU',{month:'short',day:'numeric'})}</div></div>
+          <div class="row-amt" style="color:#FF8A65">−${fmt(e.amount)}</div>
+          <button class="ico-btn" onclick="A.delWithdraw('${e.id}')">${IC.trash}</button>
+        </div>`).join('');
+      }
+      savR=savRows+extraRows+withdrawRows;
+      const ghostClick=`A.openSav()`;
+      return`<div class="gc${S.draggingGroup===g.name?' drag':''}" data-group-name="${esc(g.name)}">
+        <div class="gc-bar" style="background:${g.color}"></div>
+        <div class="gc-in">
+          <div class="gc-head">
+            <div class="gc-hl"><span class="grip" data-gc="${esc(g.name)}">${IC.grip}</span><span class="gc-name" style="color:${g.color}">${g.icon} ${esc(g.name)}</span></div>
+            <span class="gc-sum">${fmt(g.total)}</span>
+          </div>
+          ${savR}
+          <div style="display:flex;gap:8px;margin-top:9px">
+            <button class="ghost" style="flex:1" onclick="A.openSav()">${IC.plus} Befizetés</button>
+            <button class="ghost" style="flex:1;border-color:#FF8A6544;color:#FF8A65" onclick="A.openWithdraw()">${IC.plus} Kivét</button>
+          </div>
+        </div>
+      </div>`;
     }
     const gc=g.name==='Megtakarítás'?`A.openSav()`:`A.newItem('expense','${esc(g.name)}')`;
     const gl=g.name==='Megtakarítás'?'Egyedi befizetés':'Tétel hozzáadása';
@@ -495,6 +548,16 @@ function renderMain(){
     </div>
   </div>`;
 
+  const mWithdraw=`<div class="overlay${S.modal==='withdraw'?'':' hidden'}" onclick="if(event.target===this)A.close()">
+    <div class="modal">
+      <div class="m-head"><div class="m-title">💸 Kivét a megtakarításból</div><button class="x-btn" onclick="A.close()">${IC.x}</button></div>
+      <input id="wa" class="finput" type="number" inputmode="decimal" placeholder="Összeg (Ft)">
+      <input id="wl" class="finput" type="text" placeholder="Mire (pl. nyaralás, autó)">
+      <input id="wd" class="finput" type="date" value="${today()}">
+      <button class="sub-btn w" onclick="A.submitWithdraw()">Kivét rögzítése</button>
+    </div>
+  </div>`;
+
   return`<div class="app">
     <div class="topbar"><svg class="kp-sm" width="36" height="36" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
   <defs><linearGradient id="cbg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0D2318"/><stop offset="100%" stop-color="#1A3D2A"/></linearGradient><clipPath id="crr2"><rect width="180" height="180" rx="40"/></clipPath></defs>
@@ -529,7 +592,7 @@ function renderMain(){
       <button class="ghost-out" onclick="A.newItem('expense')">${IC.plus} Új csoport / tétel</button>
     </div>
     ${renderActual()}
-    ${mForm}${mSav}${mSync}${mActual}
+    ${mForm}${mSav}${mSync}${mActual}${mWithdraw}
   </div>`;
 }
 
@@ -579,7 +642,24 @@ document.addEventListener('touchend',()=>{
 
 // App controller
 window.A={
-  enter(){S.entered=true;loadData();render();},
+  enter(){
+    S.entered=true;loadData();render();
+    // Real-time Firebase listener — frissít ha a másik fél változtat
+    DB.on('value',snap=>{
+      if(!snap.exists())return;
+      const d=snap.val();
+      let changed=false;
+      if(d.items){const a=toArr(d.items);if(JSON.stringify(a)!==JSON.stringify(S.items)){S.items=a;localStorage.setItem(K+'items',JSON.stringify(a));changed=true;}}
+      if(d.customGroups){const a=toArr(d.customGroups);S.customGroups=a;localStorage.setItem(K+'customGroups',JSON.stringify(a));}
+      if(d.groupOrder){const a=toArr(d.groupOrder);if(JSON.stringify(a)!==JSON.stringify(S.groupOrder)){S.groupOrder=a;localStorage.setItem(K+'groupOrder',JSON.stringify(a));changed=true;}}
+      if(d.savingsEntries){const a=toArr(d.savingsEntries);S.savingsEntries=a;localStorage.setItem(K+'savingsEntries',JSON.stringify(a));}
+      if(d.savingsWithdrawals){const a=toArr(d.savingsWithdrawals);S.savingsWithdrawals=a;localStorage.setItem(K+'savingsWithdrawals',JSON.stringify(a));}
+      if(d.actual){const a=toArr(d.actual);S.actualPayments=a;localStorage.setItem(K+'actual',JSON.stringify(a));changed=true;}
+      if(d.dismissedSav){const a=toArr(d.dismissedSav);S.dismissedSavingsPeriods=a;localStorage.setItem(K+'dismissedSav',JSON.stringify(a));}
+      if(d.savingsStart){S.savingsStart=d.savingsStart;localStorage.setItem(K+'savingsStart',JSON.stringify(d.savingsStart));}
+      if(S.entered)render();
+    });
+  },
   close(){S.modal=null;S.editingId=null;render();},
   newItem(type,group){S.modal='form';S.editingId=null;S.formType=type;S.formGroup=group||(type==='income'?'Bevétel':'Rezsi');render();setTimeout(()=>document.getElementById('fl')?.focus(),100);},
   edit(id){const it=S.items.find(i=>i.id===id);if(!it)return;S.modal='form';S.editingId=id;S.formType=it.type;S.formGroup=it.group;render();},
@@ -607,7 +687,16 @@ window.A={
     ls('savingsEntries',S.savingsEntries);S.modal=null;render();
   },
   delSav(id){S.savingsEntries=S.savingsEntries.filter(e=>e.id!==id);ls('savingsEntries',S.savingsEntries);render();},
-  openSync(){S.modal='sync';render();},
+  openWithdraw(){S.modal='withdraw';render();setTimeout(()=>document.getElementById('wa')?.focus(),100);},
+  submitWithdraw(){
+    const amt=parseFloat(document.getElementById('wa')?.value);
+    const lbl=document.getElementById('wl')?.value.trim()||'Kivét';
+    const dt=document.getElementById('wd')?.value||today();
+    if(!amt||amt<=0)return;
+    S.savingsWithdrawals.unshift({id:Date.now().toString(),amount:amt,label:lbl,date:dt});
+    ls('savingsWithdrawals',S.savingsWithdrawals);S.modal=null;render();
+  },
+  delWithdraw(id){S.savingsWithdrawals=S.savingsWithdrawals.filter(e=>e.id!==id);ls('savingsWithdrawals',S.savingsWithdrawals);render();},
   setPerson(p){S.actualPerson=p;render();},
   newActual(){S.modal='actual';render();setTimeout(()=>document.getElementById('aa')?.focus(),100);},
   submitActual(){
@@ -629,9 +718,10 @@ window.A={
     render();
   },
   exp(){
-    const d={};['items','groupOrder','customGroups','savingsEntries','savingsStart'].forEach(k=>{const v=localStorage.getItem(K+k);if(v)d[k]=v;});
+    const keys=['items','groupOrder','customGroups','savingsEntries','savingsStart','actual','dismissedSav','savingsWithdrawals'];
+    const d={};keys.forEach(k=>{const v=localStorage.getItem(K+k);if(v)d[k]=v;});
     const j=JSON.stringify(d);
-    if(navigator.clipboard){navigator.clipboard.writeText(j).then(()=>{const m=document.getElementById('sm');if(m)m.textContent='✅ Vágólapra másolva! Küldd el és importáld a másik telefonon.';});}
+    if(navigator.clipboard){navigator.clipboard.writeText(j).then(()=>{const m=document.getElementById('sm');if(m)m.textContent='✅ Vágólapra másolva!';});}
     else{const t=document.getElementById('st');if(t)t.value=j;}
   },
   imp(){
