@@ -457,8 +457,8 @@ function renderWelcome(){
       <div style="margin-top:28px;font-size:22px;font-weight:700;color:#F4F1EA">Közös Pénztárca</div>
       <div style="margin-top:8px;margin-bottom:6px;font-size:14px;color:#6B7B78">Szandra és Ati közös havi büdzséje</div>
       <div id="login-form" style="margin-top:28px;width:100%;max-width:280px;margin-left:auto;margin-right:auto">
-        <input id="f-email" type="email" inputmode="email" placeholder="Email cím" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#111F1B;color:#F4F1EA;font-size:16px;margin-bottom:10px;box-sizing:border-box;display:block;appearance:none">
-        <input id="f-pw" type="password" placeholder="Jelszó" onkeydown="if(event.key==='Enter')A.doLogin()" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#111F1B;color:#F4F1EA;font-size:16px;margin-bottom:14px;box-sizing:border-box;display:block;appearance:none">
+        <input id="f-email" type="email" inputmode="email" autocomplete="username email" placeholder="Email cím" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#111F1B;color:#F4F1EA;font-size:16px;margin-bottom:10px;box-sizing:border-box;display:block;appearance:none">
+        <input id="f-pw" type="password" autocomplete="current-password" placeholder="Jelszó" onkeydown="if(event.key==='Enter')A.doLogin()" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#111F1B;color:#F4F1EA;font-size:16px;margin-bottom:14px;box-sizing:border-box;display:block;appearance:none">
         <button onclick="A.doLogin()" style="width:100%;padding:15px;border-radius:14px;border:none;background:#4DD0B1;color:#0B1F1C;font-size:15px;font-weight:700;cursor:pointer">Belépés</button>
         <div id="login-err" style="color:#FF8A65;font-size:13px;margin-top:12px;min-height:18px"></div>
       </div>
