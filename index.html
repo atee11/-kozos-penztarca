@@ -109,8 +109,6 @@ button{cursor:pointer}
 .sync-msg{font-size:13px;color:#9AA8A5;margin-top:12px;line-height:1.5}
 .mt16{margin-top:16px}
 </style>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 </head>
 <body style="margin:0;background:#0B1F1C;color:#F4F1EA;font-family:-apple-system,'Inter',sans-serif">
 <div id="root" style="background:#0B1F1C;min-height:100dvh"></div>
@@ -199,44 +197,78 @@ const DEF=[
   {id:'d23',type:'expense',label:'Havi megtakarítás',amount:300000,group:'Megtakarítás'},
 ];
 
+let evtSrc=null;
 function setupListener(){
-  DB.on('value',snap=>{
-    if(!snap.exists())return;
-    const d=snap.val();
-    if(d.items){const a=toArr(d.items);if(JSON.stringify(a)!==JSON.stringify(S.items)){S.items=a;localStorage.setItem(K+'items',JSON.stringify(a));}}
-    if(d.customGroups){S.customGroups=toArr(d.customGroups);localStorage.setItem(K+'customGroups',JSON.stringify(S.customGroups));}
-    if(d.groupOrder){S.groupOrder=toArr(d.groupOrder);localStorage.setItem(K+'groupOrder',JSON.stringify(S.groupOrder));}
-    if(d.savingsEntries){S.savingsEntries=toArr(d.savingsEntries);localStorage.setItem(K+'savingsEntries',JSON.stringify(S.savingsEntries));}
-    if(d.savingsWithdrawals){S.savingsWithdrawals=toArr(d.savingsWithdrawals);localStorage.setItem(K+'savingsWithdrawals',JSON.stringify(S.savingsWithdrawals));}
-    if(d.actual){S.actualPayments=toArr(d.actual);localStorage.setItem(K+'actual',JSON.stringify(S.actualPayments));}
-    if(d.dismissedSav){S.dismissedSavingsPeriods=toArr(d.dismissedSav);localStorage.setItem(K+'dismissedSav',JSON.stringify(S.dismissedSavingsPeriods));}
-    if(d.savingsStart){S.savingsStart=d.savingsStart;localStorage.setItem(K+'savingsStart',JSON.stringify(d.savingsStart));}
-    if(S.entered)render();
+  getTok().then(t=>{
+    if(!t)return;
+    if(evtSrc)evtSrc.close();
+    evtSrc=new EventSource(DB_URL+'.json?auth='+t);
+    evtSrc.addEventListener('put',e=>{
+      try{
+        const msg=JSON.parse(e.data);
+        const d=msg.path==='/'?msg.data:null;
+        if(!d)return;
+        if(d.items){S.items=toArr(d.items);localStorage.setItem(K+'items',JSON.stringify(S.items));}
+        if(d.customGroups){S.customGroups=toArr(d.customGroups);localStorage.setItem(K+'customGroups',JSON.stringify(S.customGroups));}
+        if(d.groupOrder){S.groupOrder=toArr(d.groupOrder);localStorage.setItem(K+'groupOrder',JSON.stringify(S.groupOrder));}
+        if(d.savingsEntries){S.savingsEntries=toArr(d.savingsEntries);localStorage.setItem(K+'savingsEntries',JSON.stringify(S.savingsEntries));}
+        if(d.savingsWithdrawals){S.savingsWithdrawals=toArr(d.savingsWithdrawals);localStorage.setItem(K+'savingsWithdrawals',JSON.stringify(S.savingsWithdrawals));}
+        if(d.actual){S.actualPayments=toArr(d.actual);localStorage.setItem(K+'actual',JSON.stringify(S.actualPayments));}
+        if(d.dismissedSav){S.dismissedSavingsPeriods=toArr(d.dismissedSav);localStorage.setItem(K+'dismissedSav',JSON.stringify(S.dismissedSavingsPeriods));}
+        if(d.savingsStart){S.savingsStart=d.savingsStart;localStorage.setItem(K+'savingsStart',JSON.stringify(d.savingsStart));}
+        if(S.entered)render();
+      }catch(_){}
+    });
+    evtSrc.onerror=()=>{evtSrc.close();setTimeout(setupListener,30000);};
   });
 }
-
-// Firebase + localStorage storage
-const FB_CONFIG={
-  apiKey:"AIzaSyDlJo25o80IqNYgxGM2AUXRYvsw72Dzb3o",
-  databaseURL:"https://kozos-penztarca-0411-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId:"kozos-penztarca-0411",
-  appId:"1:41177787341:web:46ec03aa2219dcbf57b284"
-};
-firebase.initializeApp(FB_CONFIG);
-const DB=firebase.database().ref('kp/6dWsy4tElTSIU3nX7739i4c97NZS6H4V');
-
-
-
+// Firebase REST API — SDK nélkül, iOS Safariban is működik
+const AK='AIzaSyDlJo25o80IqNYgxGM2AUXRYvsw72Dzb3o';
+const DB_URL='https://kozos-penztarca-0411-default-rtdb.europe-west1.firebasedatabase.app/kp';
+const ALLOWED=['toman.ati@gmail.com','ferencz.szandra@gmail.com'];
 const K='kp__';
 const toArr=v=>!v?[]:Array.isArray(v)?v:Object.values(v);
 
-// Save to Firebase + localStorage cache
-const ls=(k,v)=>{
-  try{localStorage.setItem(K+k,JSON.stringify(v));}catch(_){}
-  try{DB.child(k).set(v);}catch(_){}
-};
-// Load from localStorage (Firebase listener handles real-time updates)
+let TOK={id:null,refresh:null,expiry:0};
+function loadTok(){
+  TOK.id=localStorage.getItem('kp_tid')||null;
+  TOK.refresh=localStorage.getItem('kp_tr')||null;
+  TOK.expiry=parseInt(localStorage.getItem('kp_te')||'0');
+}
+async function refreshTok(){
+  if(!TOK.refresh)return false;
+  try{
+    const r=await fetch('https://securetoken.googleapis.com/v1/token?key='+AK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({grant_type:'refresh_token',refresh_token:TOK.refresh})});
+    const d=await r.json();if(d.error)return false;
+    TOK.id=d.id_token;TOK.refresh=d.refresh_token;TOK.expiry=Date.now()+(d.expires_in-60)*1000;
+    localStorage.setItem('kp_tid',TOK.id);localStorage.setItem('kp_tr',TOK.refresh);localStorage.setItem('kp_te',TOK.expiry);
+    return true;
+  }catch(_){return false;}
+}
+async function getTok(){
+  if(TOK.id&&Date.now()<TOK.expiry)return TOK.id;
+  return await refreshTok()?TOK.id:null;
+}
+async function signIn(email,pw){
+  const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+AK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw,returnSecureToken:true})});
+  const d=await r.json();
+  if(d.error){const msgs={'INVALID_PASSWORD':'Hibás jelszó.','EMAIL_NOT_FOUND':'Nem létező email.','INVALID_LOGIN_CREDENTIALS':'Hibás email vagy jelszó.','TOO_MANY_ATTEMPTS_TRY_LATER':'Túl sok próbálkozás.'};throw new Error(msgs[d.error.message]||'Hiba: '+d.error.message);}
+  if(!ALLOWED.includes(d.email))throw new Error('Ez a fiók nincs engedélyezve.');
+  TOK.id=d.idToken;TOK.refresh=d.refreshToken;TOK.expiry=Date.now()+(parseInt(d.expiresIn)-60)*1000;
+  localStorage.setItem('kp_tid',TOK.id);localStorage.setItem('kp_tr',TOK.refresh);localStorage.setItem('kp_te',TOK.expiry);localStorage.setItem('kp_email',d.email);
+}
+async function dbSet(path,value){
+  const t=await getTok();if(!t)return;
+  try{await fetch(DB_URL+'/'+path+'.json?auth='+t,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(value)});}catch(_){}
+}
+async function dbGetAll(){
+  const t=await getTok();if(!t)return null;
+  try{const r=await fetch(DB_URL+'.json?auth='+t);const d=await r.json();return d&&d.error?null:d;}catch(_){return null;}
+}
+
+const ls=(k,v)=>{try{localStorage.setItem(K+k,JSON.stringify(v));}catch(_){}dbSet(k,v);};
 const lg=k=>{try{const v=localStorage.getItem(K+k);return v?JSON.parse(v):null;}catch(_){return null;}};
+
 
 // State
 let S={
@@ -247,18 +279,32 @@ let S={
   draggingGroup:null,draggingItem:null,
 };
 
-function loadData(){
+async function loadData(){
+  // Először localStorage cache-ből töltjük be gyorsan
   const items=lg('items');
   S.items=items&&items.length>0?items:DEF;
-  if(!items||!items.length)ls('items',S.items);
   S.groupOrder=lg('groupOrder');
   S.customGroups=toArr(lg('customGroups'));
   S.savingsEntries=toArr(lg('savingsEntries'));
   S.savingsWithdrawals=lg('savingsWithdrawals')||[];
   S.savingsStart=lg('savingsStart')||(new Date().toISOString().slice(0,7)+'-01');
-  if(!lg('savingsStart'))ls('savingsStart',S.savingsStart);
   S.actualPayments=lg('actual')||[];
   S.dismissedSavingsPeriods=lg('dismissedSav')||[];
+  render();
+  // Majd Firebase-ből frissítjük
+  const d=await dbGetAll();
+  if(!d)return;
+  if(d.items){S.items=toArr(d.items);localStorage.setItem(K+'items',JSON.stringify(S.items));}
+  else if(!items){ls('items',S.items);}
+  if(d.groupOrder){S.groupOrder=toArr(d.groupOrder);localStorage.setItem(K+'groupOrder',JSON.stringify(S.groupOrder));}
+  if(d.customGroups){S.customGroups=toArr(d.customGroups);localStorage.setItem(K+'customGroups',JSON.stringify(S.customGroups));}
+  if(d.savingsEntries){S.savingsEntries=toArr(d.savingsEntries);localStorage.setItem(K+'savingsEntries',JSON.stringify(S.savingsEntries));}
+  if(d.savingsWithdrawals){S.savingsWithdrawals=toArr(d.savingsWithdrawals);localStorage.setItem(K+'savingsWithdrawals',JSON.stringify(S.savingsWithdrawals));}
+  if(d.savingsStart){S.savingsStart=d.savingsStart;localStorage.setItem(K+'savingsStart',JSON.stringify(d.savingsStart));}
+  if(d.actual){S.actualPayments=toArr(d.actual);localStorage.setItem(K+'actual',JSON.stringify(S.actualPayments));}
+  if(d.dismissedSav){S.dismissedSavingsPeriods=toArr(d.dismissedSav);localStorage.setItem(K+'dismissedSav',JSON.stringify(S.dismissedSavingsPeriods));}
+  if(!lg('savingsStart'))ls('savingsStart',S.savingsStart);
+  render();
 }
 
 // Computed
@@ -410,7 +456,12 @@ function renderWelcome(){
       </svg>
       <div style="margin-top:28px;font-size:22px;font-weight:700;color:#F4F1EA">Közös Pénztárca</div>
       <div style="margin-top:8px;margin-bottom:6px;font-size:14px;color:#6B7B78">Szandra és Ati közös havi büdzséje</div>
-      <button onclick="A.enter()" style="margin-top:28px;padding:16px 48px;border-radius:16px;border:none;background:#4DD0B1;color:#0B1F1C;font-size:16px;font-weight:700;cursor:pointer">Megnyitás</button>
+      <div id="login-form" style="margin-top:28px;width:100%;max-width:280px;margin-left:auto;margin-right:auto">
+        <input id="f-email" type="email" inputmode="email" placeholder="Email cím" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#111F1B;color:#F4F1EA;font-size:16px;margin-bottom:10px;box-sizing:border-box;display:block;appearance:none">
+        <input id="f-pw" type="password" placeholder="Jelszó" onkeydown="if(event.key==='Enter')A.doLogin()" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#111F1B;color:#F4F1EA;font-size:16px;margin-bottom:14px;box-sizing:border-box;display:block;appearance:none">
+        <button onclick="A.doLogin()" style="width:100%;padding:15px;border-radius:14px;border:none;background:#4DD0B1;color:#0B1F1C;font-size:15px;font-weight:700;cursor:pointer">Belépés</button>
+        <div id="login-err" style="color:#FF8A65;font-size:13px;margin-top:12px;min-height:18px"></div>
+      </div>
     </div>
   </div>`;
 }
@@ -661,7 +712,19 @@ document.addEventListener('touchend',()=>{
 
 // App controller
 window.A={
-  enter(){S.entered=true;loadData();render();setupListener();},
+  doLogin(){
+    const email=document.getElementById('f-email')?.value.trim();
+    const pw=document.getElementById('f-pw')?.value;
+    const err=document.getElementById('login-err');
+    if(!email||!pw){if(err)err.textContent='Add meg az email címet és a jelszót.';return;}
+    if(err)err.textContent='Belépés...';
+    signIn(email,pw).then(()=>{
+      S.entered=true;
+      loadData().then(()=>setupListener());
+    }).catch(e=>{
+      if(err)err.textContent=e.message;
+    });
+  },
 
   close(){S.modal=null;S.editingId=null;render();},
   newItem(type,group){S.modal='form';S.editingId=null;S.formType=type;S.formGroup=group||(type==='income'?'Bevétel':'Rezsi');render();setTimeout(()=>document.getElementById('fl')?.focus(),100);},
