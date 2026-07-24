@@ -111,7 +111,32 @@ button{cursor:pointer}
 </style>
 </head>
 <body style="margin:0;background:#0B1F1C;color:#F4F1EA;font-family:-apple-system,'Inter',sans-serif">
-<div id="root" style="background:#0B1F1C;min-height:100dvh"></div>
+<div id="login-overlay" style="min-height:100dvh;background:#0B1F1C;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:-apple-system,sans-serif">
+  <div style="width:100%;max-width:320px;text-align:center">
+    <svg width="100" height="100" viewBox="0 0 180 180" style="display:block;margin:0 auto 24px;border-radius:24px;box-shadow:0 0 0 2px rgba(77,208,177,.2),0 16px 48px rgba(0,0,0,.6)" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="lg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0D2318"/><stop offset="100%" stop-color="#1A3D2A"/></linearGradient><clipPath id="cr1"><rect width="180" height="180" rx="40"/></clipPath></defs>
+      <rect width="180" height="180" rx="40" fill="url(#lg1)"/>
+      <g clip-path="url(#cr1)">
+        <circle cx="90" cy="90" r="70" fill="none" stroke="#4DD0B1" stroke-width="6" opacity="0.35"/>
+        <circle cx="90" cy="90" r="62" fill="none" stroke="#4DD0B1" stroke-width="1.5" opacity="0.2"/>
+        <text x="90" y="94" text-anchor="middle" dominant-baseline="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="64" fill="#4DD0B1">KP</text>
+        <circle cx="90" cy="13" r="3.5" fill="#4DD0B1" opacity="0.5"/>
+        <circle cx="90" cy="167" r="3.5" fill="#4DD0B1" opacity="0.5"/>
+      </g>
+    </svg>
+    <div style="font-size:22px;font-weight:700;color:#F4F1EA;margin-bottom:6px">Közös Pénztárca</div>
+    <div style="font-size:14px;color:#6B7B78;margin-bottom:28px">Szandra és Ati</div>
+    <form id="kp-login-form" action="javascript:void(0)" autocomplete="on" onsubmit="A.doLogin(event)" style="width:100%">
+      <input id="f-email" name="email" type="email" inputmode="email" autocomplete="username email" placeholder="Email cím"
+        style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#111F1B;color:#F4F1EA;font-size:16px;margin-bottom:10px;box-sizing:border-box;display:block;-webkit-appearance:none">
+      <input id="f-pw" name="password" type="password" autocomplete="current-password" placeholder="Jelszó"
+        style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#111F1B;color:#F4F1EA;font-size:16px;margin-bottom:14px;box-sizing:border-box;display:block;-webkit-appearance:none">
+      <button type="submit" style="width:100%;padding:15px;border-radius:14px;border:none;background:#4DD0B1;color:#0B1F1C;font-size:15px;font-weight:700;cursor:pointer">Belépés</button>
+    </form>
+    <div id="login-err" style="color:#FF8A65;font-size:13px;margin-top:12px;min-height:18px"></div>
+  </div>
+</div>
+<div id="root" style="background:#0B1F1C;min-height:100dvh;display:none"></div>
 <script>
 'use strict';
 
@@ -197,30 +222,26 @@ const DEF=[
   {id:'d23',type:'expense',label:'Havi megtakarítás',amount:300000,group:'Megtakarítás'},
 ];
 
-let evtSrc=null;
+let pollTimer=null;
+async function syncFromFirebase(){
+  const d=await dbGetAll();
+  if(!d||d.error)return;
+  let changed=false;
+  function upd(key,src,parse){const a=parse?toArr(src):src;if(JSON.stringify(a)!==JSON.stringify(S[key])){S[key]=a;localStorage.setItem(K+key.replace('actualPayments','actual').replace('dismissedSavingsPeriods','dismissedSav').replace('savingsEntries','savingsEntries').replace('savingsWithdrawals','savingsWithdrawals').replace('savingsStart','savingsStart'),JSON.stringify(a));changed=true;}}
+  if(d.items){upd('items',d.items,true);}
+  if(d.customGroups){S.customGroups=toArr(d.customGroups);localStorage.setItem(K+'customGroups',JSON.stringify(S.customGroups));}
+  if(d.groupOrder){const a=toArr(d.groupOrder);if(JSON.stringify(a)!==JSON.stringify(S.groupOrder)){S.groupOrder=a;localStorage.setItem(K+'groupOrder',JSON.stringify(a));changed=true;}}
+  if(d.savingsEntries){S.savingsEntries=toArr(d.savingsEntries);localStorage.setItem(K+'savingsEntries',JSON.stringify(S.savingsEntries));}
+  if(d.savingsWithdrawals){S.savingsWithdrawals=toArr(d.savingsWithdrawals);localStorage.setItem(K+'savingsWithdrawals',JSON.stringify(S.savingsWithdrawals));}
+  if(d.actual){const a=toArr(d.actual);if(JSON.stringify(a)!==JSON.stringify(S.actualPayments)){S.actualPayments=a;localStorage.setItem(K+'actual',JSON.stringify(a));changed=true;}}
+  if(d.dismissedSav){S.dismissedSavingsPeriods=toArr(d.dismissedSav);localStorage.setItem(K+'dismissedSav',JSON.stringify(S.dismissedSavingsPeriods));}
+  if(d.savingsStart){S.savingsStart=d.savingsStart;localStorage.setItem(K+'savingsStart',JSON.stringify(d.savingsStart));}
+  if(changed&&S.entered)render();
+}
 function setupListener(){
-  getTok().then(t=>{
-    if(!t)return;
-    if(evtSrc)evtSrc.close();
-    evtSrc=new EventSource(DB_URL+'.json?auth='+t);
-    evtSrc.addEventListener('put',e=>{
-      try{
-        const msg=JSON.parse(e.data);
-        const d=msg.path==='/'?msg.data:null;
-        if(!d)return;
-        if(d.items){S.items=toArr(d.items);localStorage.setItem(K+'items',JSON.stringify(S.items));}
-        if(d.customGroups){S.customGroups=toArr(d.customGroups);localStorage.setItem(K+'customGroups',JSON.stringify(S.customGroups));}
-        if(d.groupOrder){S.groupOrder=toArr(d.groupOrder);localStorage.setItem(K+'groupOrder',JSON.stringify(S.groupOrder));}
-        if(d.savingsEntries){S.savingsEntries=toArr(d.savingsEntries);localStorage.setItem(K+'savingsEntries',JSON.stringify(S.savingsEntries));}
-        if(d.savingsWithdrawals){S.savingsWithdrawals=toArr(d.savingsWithdrawals);localStorage.setItem(K+'savingsWithdrawals',JSON.stringify(S.savingsWithdrawals));}
-        if(d.actual){S.actualPayments=toArr(d.actual);localStorage.setItem(K+'actual',JSON.stringify(S.actualPayments));}
-        if(d.dismissedSav){S.dismissedSavingsPeriods=toArr(d.dismissedSav);localStorage.setItem(K+'dismissedSav',JSON.stringify(S.dismissedSavingsPeriods));}
-        if(d.savingsStart){S.savingsStart=d.savingsStart;localStorage.setItem(K+'savingsStart',JSON.stringify(d.savingsStart));}
-        if(S.entered)render();
-      }catch(_){}
-    });
-    evtSrc.onerror=()=>{evtSrc.close();setTimeout(setupListener,30000);};
-  });
+  if(pollTimer)clearInterval(pollTimer);
+  pollTimer=setInterval(syncFromFirebase,10000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncFromFirebase();});
 }
 // Firebase REST API — SDK nélkül, iOS Safariban is működik
 const AK='AIzaSyDlJo25o80IqNYgxGM2AUXRYvsw72Dzb3o';
@@ -435,36 +456,19 @@ function renderActual(){
 
 // Render
 function render(){
-  const r=document.getElementById('root');
-  r.innerHTML=S.entered?renderMain():renderWelcome();
+  const overlay=document.getElementById('login-overlay');
+  const root=document.getElementById('root');
+  if(!S.entered){
+    if(overlay)overlay.style.display='flex';
+    if(root)root.style.display='none';
+    return;
+  }
+  if(overlay)overlay.style.display='none';
+  if(root){root.style.display='block';root.innerHTML=renderMain();}
   bind();
 }
 
-function renderWelcome(){
-  return`<div class="welcome" style="flex-direction:column;gap:32px">
-    <div style="text-align:center">
-      <svg width="160" height="160" viewBox="0 0 180 180" style="display:block;margin:0 auto;border-radius:36px;box-shadow:0 0 0 2px rgba(77,208,177,.2),0 20px 60px rgba(0,0,0,.6)" xmlns="http://www.w3.org/2000/svg">
-        <defs><linearGradient id="wbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#0D2318"/><stop offset="100%" stop-color="#1A3D2A"/></linearGradient><clipPath id="wrr"><rect width="180" height="180" rx="40"/></clipPath></defs>
-        <rect width="180" height="180" rx="40" fill="url(#wbg)"/>
-        <g clip-path="url(#wrr)">
-          <circle cx="90" cy="90" r="70" fill="none" stroke="#4DD0B1" stroke-width="6" opacity="0.35"/>
-          <circle cx="90" cy="90" r="62" fill="none" stroke="#4DD0B1" stroke-width="1.5" opacity="0.2"/>
-          <text x="90" y="94" text-anchor="middle" dominant-baseline="middle" font-family="Arial Black,Arial,sans-serif" font-weight="900" font-size="64" fill="#4DD0B1">KP</text>
-          <circle cx="90" cy="13" r="3.5" fill="#4DD0B1" opacity="0.5"/>
-          <circle cx="90" cy="167" r="3.5" fill="#4DD0B1" opacity="0.5"/>
-        </g>
-      </svg>
-      <div style="margin-top:28px;font-size:22px;font-weight:700;color:#F4F1EA">Közös Pénztárca</div>
-      <div style="margin-top:8px;margin-bottom:6px;font-size:14px;color:#6B7B78">Szandra és Ati közös havi büdzséje</div>
-      <div id="login-form" style="margin-top:28px;width:100%;max-width:280px;margin-left:auto;margin-right:auto">
-        <input id="f-email" type="email" inputmode="email" autocomplete="username email" placeholder="Email cím" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#111F1B;color:#F4F1EA;font-size:16px;margin-bottom:10px;box-sizing:border-box;display:block;appearance:none">
-        <input id="f-pw" type="password" autocomplete="current-password" placeholder="Jelszó" onkeydown="if(event.key==='Enter')A.doLogin()" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #27332F;background:#111F1B;color:#F4F1EA;font-size:16px;margin-bottom:14px;box-sizing:border-box;display:block;appearance:none">
-        <button onclick="A.doLogin()" style="width:100%;padding:15px;border-radius:14px;border:none;background:#4DD0B1;color:#0B1F1C;font-size:15px;font-weight:700;cursor:pointer">Belépés</button>
-        <div id="login-err" style="color:#FF8A65;font-size:13px;margin-top:12px;min-height:18px"></div>
-      </div>
-    </div>
-  </div>`;
-}
+
 
 function renderMain(){
   const ti=getTI(),at=getAT(),zpp=getZPP(),st=getST(),ge=getGE();
@@ -712,7 +716,8 @@ document.addEventListener('touchend',()=>{
 
 // App controller
 window.A={
-  doLogin(){
+  doLogin(e){
+    if(e)e.preventDefault();
     const email=document.getElementById('f-email')?.value.trim();
     const pw=document.getElementById('f-pw')?.value;
     const err=document.getElementById('login-err');
@@ -721,8 +726,8 @@ window.A={
     signIn(email,pw).then(()=>{
       S.entered=true;
       loadData().then(()=>setupListener());
-    }).catch(e=>{
-      if(err)err.textContent=e.message;
+    }).catch(e2=>{
+      if(err)err.textContent=e2.message;
     });
   },
 
